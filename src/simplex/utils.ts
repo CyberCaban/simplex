@@ -1,9 +1,39 @@
-type Matrix = number[][];
+import Fraction from "fraction.js";
+
+// @ts-ignore
+Fraction.prototype.toString = Fraction.prototype.toFraction
+function createBeautifulTable(matrix: Fraction[][], headers: string[] | null = null) {
+  if (headers) {
+    // @ts-ignore
+    matrix = [headers, ...matrix];
+  }
+
+  const colWidths = matrix[0].map((_, colIndex: number) =>
+    Math.max(...matrix.map(row => String(row[colIndex]).length))
+  );
+
+  const rows = matrix.map(row =>
+    '| ' + row.map((cell, i) =>
+      cell.toString().padEnd(colWidths[i])
+    ).join(' | ') + ' |'
+  );
+
+  if (headers) {
+    const separator = '|' + colWidths.map(width =>
+      '-'.repeat(width + 2)
+    ).join('|') + '|';
+    rows.splice(1, 0, separator);
+  }
+
+  return rows.join('\n');
+}
+
+type Matrix = Fraction[][];
 
 function gaussWithBasis(matrix: Matrix, basis: number[]): Matrix {
   const result = matrix.map(row => [...row]);
   const rows = result.length;
-  const cols = result[0].length;
+  const cols = result[0].length
 
   if (!basis.every((it) => it < cols)) {
     throw new Error('Размер базиса должен совпадать с количеством уравнений');
@@ -11,19 +41,19 @@ function gaussWithBasis(matrix: Matrix, basis: number[]): Matrix {
 
   // Gauss forward
   for (let i = 0; i < rows; i++) {
-    const pivotCol = basis[i];
+    const pivotCol = basis[i].valueOf();
 
     // Находим строку с ненулевым элементом в столбце базиса
     let pivotRow = i;
     for (let j = i; j < rows; j++) {
-      if (Math.abs(result[j][pivotCol]) > 1e-10) {
+      if (result[j][pivotCol].abs() > new Fraction(1e-10)) {
         pivotRow = j;
         break;
       }
     }
 
     // singular system
-    if (Math.abs(result[pivotRow][pivotCol]) < 1e-10) {
+    if (result[pivotRow][pivotCol].abs() < new Fraction(1e-10)) {
       throw new Error('Система вырождена для данного базиса');
     }
 
@@ -34,8 +64,8 @@ function gaussWithBasis(matrix: Matrix, basis: number[]): Matrix {
 
     // Normalise
     const pivotValue = result[i][pivotCol];
-    for (let j = 0; j < cols; j++) {
-      result[i][j] /= pivotValue;
+    for (let j = 0; j < cols.valueOf(); j++) {
+      result[i][j] = result[i][j].div(pivotValue);
     }
 
     // Zeroing other cols
@@ -43,7 +73,8 @@ function gaussWithBasis(matrix: Matrix, basis: number[]): Matrix {
       if (j !== i) {
         const factor = result[j][pivotCol];
         for (let k = 0; k < cols; k++) {
-          result[j][k] -= factor * result[i][k];
+          const zeroingEl = factor.mul(result[i][k])
+          result[j][k] = result[j][k].add(-zeroingEl)
         }
       }
     }
@@ -60,7 +91,7 @@ function tryExpr<T>(fallibleFn: () => T): Result<T, Error> {
     return [null, e] as [null, Error]
   }
 }
-type Expression = { param: number, expression: number[] };
+type Expression = { param: number, expression: Fraction[] };
 class BasisExpressions {
   // expressed basis params
   expressions: Expression[]
@@ -83,17 +114,15 @@ class BasisExpressions {
     const constantCol = cols; // индекс столбца со свободными членами
     for (let b = 0; b < basis.length; b++) {
       const el = basis[b]
-      const expression = []
+      const expression: Fraction[] = []
       for (let i = 0; i < rows; i++) {
         // if basis element
-        if (matrix[i][el] === 1) {
+        if (matrix[i][el].equals(1)) {
           for (let j = 0; j < cols; j++) {
             if (j !== el) {
               // math checks
               const elementToSwap = matrix[i][j]
-              if (elementToSwap === 0) expression.push(elementToSwap)
-              else
-                expression.push(-elementToSwap)
+              expression.push(elementToSwap.neg())
             }
           }
           // add constant
@@ -109,36 +138,39 @@ class BasisExpressions {
   }
 }
 type SimplexBranch = "Success" | "No limit" | "Intermediate Step"
+type PivotElement = { row: number, col: number, ratio: Fraction };
 class SimplexTable {
-  substitutedFn: number[]
+  substitutedFn: Fraction[]
   basisExpressions: BasisExpressions
   basis: number[]
-  table: number[][]
-  constructor(basisExpressions: BasisExpressions, basis: number[], fn: number[]) {
+  table: Fraction[][]
+  constructor(basisExpressions: BasisExpressions, basis: number[], fn: Fraction[]) {
     this.basis = basis
     this.substitutedFn = substituteFn(basisExpressions, basis, fn)
     this.basisExpressions = basisExpressions
     this.table = this.initTable()
   }
-  private initTable(): number[][] {
-    const table = []
+  private initTable(): Fraction[][] {
+    const table: Fraction[][] = []
     this.basisExpressions.solvedGauss.forEach(it => {
       const tableRow = it.map((num, idx) => {
-        if (!this.basis.includes(idx)) return num; else return 0
+        if (!this.basis.includes(idx)) return num; else return new Fraction(0)
       })
       table.push(tableRow)
     });
-    table.push(this.substitutedFn)
+    const lastRow = this.substitutedFn.slice()
+    lastRow[lastRow.length - 1] = lastRow[lastRow.length - 1].neg()
+    table.push(lastRow)
     return table
   }
   // [rows, cols]
   get size(): [number, number] {
     return [this.table.length, this.table[0].length]
   }
-  get fn(): number[] {
+  get fn(): Fraction[] {
     return this.table[this.size[0] - 1]
   }
-  get constraints(): number[][] {
+  get constraints(): Fraction[][] {
     return this.table.slice(0, this.table.length)
   }
   simplexStep() {
@@ -146,52 +178,95 @@ class SimplexTable {
     switch (branch) {
       case "Success":
         const [rows, cols] = this.size
-        return this.table[rows - 1][cols - 1]
+        return this.table[rows - 1][cols - 1].neg()
 
       case "No limit":
         throw Error("Function has no lower bound")
       case "Intermediate Step":
         this.calculateStep()
-        // this.simplexStep()
+        this.simplexStep()
         break
       default:
         break;
     }
   }
   calculateStep() {
+    // TODO: simplex method
+    const { row: pivotRow, col: pivotCol, ratio } = this.findBestPivot()
+    const [rows, cols] = this.size
+    const newTable: Fraction[][] = Array(rows).fill(null).map(() => Array(cols).fill(new Fraction(0)))
+
+    const invertedPivot = this.table[pivotRow][pivotCol].inverse()
+    const newBasis = this.basis.slice()
+    newBasis[pivotRow] = pivotCol
+    console.log("old basis:", this.basis, "new basis:", newBasis);
+
+    const swapCol = this.basis[pivotRow]
+    // invert pivot
+    newTable[pivotRow][swapCol] = invertedPivot
+    // pivot row
+    for (let i = 0; i < cols; i++) {
+      if (i != pivotCol && i != swapCol) // do not touch pivot
+        newTable[pivotRow][i] = (invertedPivot.mul(this.table[pivotRow][i]))
+    }
+    // pivot col
+    for (let i = 0; i < rows; i++) {
+      if (i !== pivotRow)
+        newTable[i][swapCol] = invertedPivot.neg().mul(this.table[i][pivotCol])
+    }
+    // calculate other rows
+    for (let i = 0; i < rows; i++) {
+      if (i === pivotRow) continue
+      for (let j = 0; j < cols; j++) {
+        if (j === swapCol || j === pivotCol) continue
+        newTable[i][j] = this.table[i][j].add(
+          this.table[i][pivotCol]
+            .neg()
+            .mul(newTable[pivotRow][j])
+        )
+      }
+    }
+    this.basis = newBasis
+    this.table = newTable
+  }
+  findBestPivot(): PivotElement {
     const fn = this.fn
     const constraints = this.constraints
-    const ratios: { row: number, col: number, ratio: number }[] = []
-    for (let col = 0; col < fn.length - 1; col++) {
-      if (this.basis.includes(col) || fn[col] >= 0) continue;
+    const possiblePivots: PivotElement[] = []
+    for (let col = 0; col < this.table[0].length - 1; col++) {
+      if (this.basis.includes(col) || fn[col].gte(0)) continue;
       else {
-        for (let row = 0; row < constraints.length; row++) {
-          const aplha_i = constraints[row][col]
-          const beta = constraints[row][this.size[1] - 1]
-          if (aplha_i > 0) ratios.push({
-            row, col, ratio: beta / aplha_i
+        for (let row = 0; row < this.table.length; row++) {
+          const aplha_i = this.table[row][col]
+          const beta = this.table[row][this.size[1] - 1]
+          if (aplha_i.gt(0)) possiblePivots.push({
+            row, col, ratio: beta.div(aplha_i)
           })
         }
       }
     }
-    const bestRatio = ratios.reduce((acc, curr) => {
-      if (acc.ratio > curr.ratio) return curr
-      else return acc
-    }, ratios[0])
-    console.log(bestRatio);
-    // TODO: simplex method
+    let bestPivot = possiblePivots[0]
+    for (let i = 0; i < possiblePivots.length; i++) {
+      if (bestPivot.ratio > possiblePivots[i].ratio) bestPivot = possiblePivots[i]
+    }
+    console.log("Best Pivot: ", "row:", bestPivot.row, "col:", bestPivot.col, "ratio:", bestPivot.ratio.toFraction());
+    return bestPivot
   }
   chooseBranch(): SimplexBranch {
     const fn = this.fn
     const constraints = this.constraints
-    if (fn.every(it => it >= 0)) return "Success"
+    if (fn.every(it => it.gte(0))) return "Success"
     for (let col = 0; col < fn.length; col++) {
-      if (fn[col] < 0) continue
+      if (fn[col].lt(0)) continue
       else {
-        if (constraints.every(it => it[col] < 0)) return "No limit"
+        if (constraints.every(it => it[col].lt(0))) return "No limit"
       }
     }
     return "Intermediate Step"
+  }
+  toString(): string {
+    const basises = new Array(this.size[1]).fill("").map((_, idx) => this.basis.includes(idx) ? `x_${idx}*` : `x_${idx}`)
+    return `Table:\n${createBeautifulTable(this.table, basises)}`
   }
 }
 function expressBasisVariables(matrix: Matrix, basis: number[]): BasisExpressions {
@@ -205,13 +280,13 @@ function addArrays(arr1: number[], arr2: number[]): number[] {
   }
   return result
 }
-function substituteFn(basisExpressions: BasisExpressions, basis: number[], fn: number[]): number[] {
+function substituteFn(basisExpressions: BasisExpressions, basis: number[], fn: Fraction[]): Fraction[] {
   const matrix = basisExpressions.solvedGauss
   const cols = matrix[0].length - 1
   const rows = matrix.length
   const constantCol = cols
   // function substitution
-  const substitutedFn = new Array(cols + 1).fill(0)
+  const substitutedFn: Fraction[] = new Array(cols + 1).fill(new Fraction(0))
   // fill from original fn without substituted elements
   for (let i = 0; i < cols; i++) {
     if (!basis.includes(i)) {
@@ -222,26 +297,27 @@ function substituteFn(basisExpressions: BasisExpressions, basis: number[], fn: n
   for (let i = 0; i < rows; i++) {
     const basisVar = basisExpressions.get(i)
     const coeff = fn[basisVar.param]
-    const multipliedExpr = basisVar.expression.map((it) => it * coeff)
+    const multipliedExpr = basisVar.expression.map((it) => it.mul(coeff))
 
     for (let j = 0; j < cols; j++) {
       if (!basis.includes(j))
-        substitutedFn[j] += multipliedExpr[j]
+        substitutedFn[j] = substitutedFn[j].add(multipliedExpr[j])
     }
-    substitutedFn[constantCol] += coeff * matrix[i][constantCol]
+    substitutedFn[constantCol] = substitutedFn[constantCol].add(matrix[i][constantCol].mul(coeff))
   }
   return substitutedFn
 }
 
 export function main() {
+  console.clear()
   const dimension = 4;
   // target fn
   // last element is param free
-  const fn = [-2, -1, -3, -1, 0]; // -> min
+  const fn = [-2, -1, -3, -1, 0].map(it => new Fraction(it)); // -> min
   const constraints = [
     [1, 2, 5, -1, 4],
     [1, -1, -1, 2, 1]
-  ]
+  ].map(row => row.map(el => new Fraction(el)))
   const basis = [2, 3] // actual basis = [3, 4]
   const [data, error] = tryExpr(() => gaussWithBasis(constraints, basis))
   if (error) {
@@ -249,12 +325,10 @@ export function main() {
     return
   }
   console.log('Результат:');
-  data.forEach(row => console.log(row.map(x => Math.round(x * 100) / 100).join(' ')));
+  data.forEach(row => console.log(row.map(x => x.toFraction()).join(' ')));
 
   const basisExpressions = new BasisExpressions(data, basis)
   const table = new SimplexTable(basisExpressions, basis, fn)
-  console.log(table);
-  console.log(table.simplexStep());
-
-
+  table.simplexStep()
+  console.log(table.toString());
 }
