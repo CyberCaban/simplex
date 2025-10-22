@@ -28,7 +28,7 @@ export class BasisExpressions {
 
     for (let b = 0; b < basis.length; b++) {
       const basisParam = basis[b]
-      let expression: Fraction[] = new Array(cols + 1).fill(new Fraction(0)) // +1 для константы
+      let expression: Fraction[] = new Array(cols + 1).fill(null).map(()=>new Fraction(0)) // +1 для константы
 
       let foundRow = -1;
       for (let i = 0; i < rows; i++) {
@@ -46,7 +46,7 @@ export class BasisExpressions {
           expression[j] = matrix[foundRow][j].div(coeff).neg();
         }
       }
-      expression[constantCol] = matrix[foundRow][constantCol].div(coeff);
+      expression[basisParam] = new Fraction(1)
 
       result.push({
         param: basisParam,
@@ -54,4 +54,5 @@ export class BasisExpressions {
       })
     }
     return result
-  }}
+  }
+}

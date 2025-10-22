@@ -21,15 +21,16 @@ export class SimplexTable {
   }
   private initTable(): Fraction[][] {
     const table: Fraction[][] = []
-    this.basisExpressions.solvedGauss.forEach(it => {
-      const tableRow = it.map((num, idx) => {
-        if (!this.basis.includes(idx)) return num; else return new Fraction(0)
-      })
-      table.push(tableRow)
-    });
+    const [rows, cols] = [this.basisExpressions.solvedGauss.length, this.basisExpressions.solvedGauss[0].length]
+
+    for (let i = 0; i < rows; i++) {
+      table.push([...this.basisExpressions.solvedGauss[i]])
+    }
+
     const lastRow = this.substitutedFn.slice()
     lastRow[lastRow.length - 1] = lastRow[lastRow.length - 1].neg()
     table.push(lastRow)
+
     return table
   }
   // [rows, cols]
@@ -61,46 +62,52 @@ export class SimplexTable {
     }
   }
   calculateStep() {
-    const { row: pivotRow, col: pivotCol } = this.findBestPivot()
+    const bestPivot = this.findBestPivot()
+    if (bestPivot === null) throw Error("Опорный элемент не найден")
+    const { row: pivotRow, col: pivotCol } = bestPivot
     const [rows, cols] = this.size
-    const newTable: Fraction[][] = Array(rows).fill(null).map(() => Array(cols).fill(new Fraction(0)))
+    const newTable: Fraction[][] = Array(rows)
+      .fill(null)
+      .map(() => 
+        Array(cols)
+          .fill(null)
+          .map(()=>
+            new Fraction(0)))
 
-    const invertedPivot = this.table[pivotRow][pivotCol].inverse()
-    const newBasis = this.basis.slice()
-    newBasis[pivotRow] = pivotCol
+    const pivot = this.table[pivotRow][pivotCol]
+    this.basis[pivotRow] = pivotCol
 
     const swapCol = this.basis[pivotRow]
+
     // invert pivot
-    newTable[pivotRow][swapCol] = invertedPivot
+    // newTable[pivotRow][swapCol] = invertedPivot
     // pivot row
     for (let i = 0; i < cols; i++) {
-      if (i != pivotCol && i != swapCol) // do not touch pivot
-        newTable[pivotRow][i] = (invertedPivot.mul(this.table[pivotRow][i]))
+        newTable[pivotRow][i] = this.table[pivotRow][i].div(pivot)
     }
     // pivot col
-    for (let i = 0; i < rows; i++) {
-      if (i !== pivotRow)
-        newTable[i][swapCol] = invertedPivot.neg().mul(this.table[i][pivotCol])
-    }
+    // for (let i = 0; i < rows; i++) {
+    //   if (i !== pivotRow)
+    //     newTable[i][swapCol] = invertedPivot.neg().mul(this.table[i][pivotCol])
+    // }
     // calculate other rows
     for (let i = 0; i < rows; i++) {
       if (i === pivotRow) continue
       for (let j = 0; j < cols; j++) {
-        if (j === swapCol || j === pivotCol) continue
-        newTable[i][j] = this.table[i][j].add(
+        newTable[i][j] = this.table[i][j].sub(
           this.table[i][pivotCol]
-            .neg()
             .mul(newTable[pivotRow][j])
         )
       }
     }
-    this.basis = newBasis
     this.table = newTable
   }
-  findBestPivot(): PivotElement {
+  findBestPivot(): PivotElement | null {
     const fn = this.fn
+    const constraints = this.constraints.slice(0, -1)
     const possiblePivots: PivotElement[] = []
-    for (let col = 0; col < this.table[0].length - 1; col++) {
+
+    for (let col = 0; col < fn.length - 1; col++) {
       if (this.basis.includes(col) || fn[col].gte(0)) continue;
       else {
         for (let row = 0; row < this.table.length; row++) {
