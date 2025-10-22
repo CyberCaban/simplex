@@ -23,31 +23,35 @@ export class BasisExpressions {
   private makeExpressions(matrix: Matrix, basis: number[]): Expression[] {
     const result: Expression[] = []
     const rows = matrix.length;
-    const cols = matrix[0].length - 1; // -1 потому что последний столбец - свободные члены
-    const constantCol = cols; // индекс столбца со свободными членами
+    const cols = matrix[0].length - 1;
+    const constantCol = cols;
 
     for (let b = 0; b < basis.length; b++) {
       const basisParam = basis[b]
-      let expression: Fraction[] = new Array(cols).fill(new Fraction(0))
+      let expression: Fraction[] = new Array(cols + 1).fill(new Fraction(0)) // +1 для константы
+
+      let foundRow = -1;
       for (let i = 0; i < rows; i++) {
         if (!matrix[i][basisParam].equals(0)) {
-          const coeff = matrix[i][basisParam]
-
-          for (let j = 0; j < cols; j++) {
-            if (j !== basisParam) {
-              expression[i] = (matrix[i][j].div(coeff)).neg()
-            }
-          }
-          // add constant
-          expression[constantCol] = (matrix[i][constantCol].div(coeff))
-          break
+          foundRow = i;
+          break;
         }
       }
+
+      if (foundRow === -1) continue;
+
+      const coeff = matrix[foundRow][basisParam];
+      for (let j = 0; j < cols; j++) {
+        if (j !== basisParam) {
+          expression[j] = matrix[foundRow][j].div(coeff).neg();
+        }
+      }
+      expression[constantCol] = matrix[foundRow][constantCol].div(coeff);
+
       result.push({
         param: basisParam,
         expression
       })
     }
     return result
-  }
-}
+  }}

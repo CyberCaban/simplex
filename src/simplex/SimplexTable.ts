@@ -15,10 +15,7 @@ export class SimplexTable {
     const { constraints, basis, fn } = lpTask
     const gaussSolved = gaussWithBasis(constraints, basis)
     this.basis = basis
-    console.log(createBeautifulTable(gaussSolved));
-
     this.basisExpressions = new BasisExpressions(gaussSolved, basis)
-    console.log(this.basisExpressions.exprToString());
     this.substitutedFn = substituteFn(this.basisExpressions, basis, fn)
     this.table = this.initTable()
   }
@@ -64,7 +61,6 @@ export class SimplexTable {
     }
   }
   calculateStep() {
-    // TODO: simplex method
     const { row: pivotRow, col: pivotCol } = this.findBestPivot()
     const [rows, cols] = this.size
     const newTable: Fraction[][] = Array(rows).fill(null).map(() => Array(cols).fill(new Fraction(0)))
@@ -72,7 +68,6 @@ export class SimplexTable {
     const invertedPivot = this.table[pivotRow][pivotCol].inverse()
     const newBasis = this.basis.slice()
     newBasis[pivotRow] = pivotCol
-    console.log("old basis:", this.basis, "new basis:", newBasis);
 
     const swapCol = this.basis[pivotRow]
     // invert pivot
@@ -120,15 +115,13 @@ export class SimplexTable {
     let bestPivot = possiblePivots[0]
     if (bestPivot == null) throw Error("No pivots")
     for (let i = 0; i < possiblePivots.length; i++) {
-      if (bestPivot.ratio > possiblePivots[i].ratio) bestPivot = possiblePivots[i]
+      if (bestPivot.ratio.gt(possiblePivots[i].ratio)) bestPivot = possiblePivots[i]
     }
-    console.log("Best Pivot: ", "row:", bestPivot.row, "col:", bestPivot.col, "ratio:", bestPivot.ratio.toFraction());
     return bestPivot
   }
   chooseBranch(): SimplexBranch {
     const fn = this.fn.slice(0, this.fn.length - 1)
     const constraints = this.constraints
-    console.log(createBeautifulTable(constraints));
     if (fn.every(it => it.gte(0))) return "Success"
     for (let col = 0; col < fn.length; col++) {
       if (fn[col].lt(0)) {
@@ -138,7 +131,10 @@ export class SimplexTable {
     return "Intermediate Step"
   }
   toString(): string {
-    const basises = new Array(this.size[1]).fill("").map((_, idx) => this.basis.includes(idx) ? `x_${idx}*` : `x_${idx}`)
+    const basises = new Array(this.size[1]).fill("").map((_, idx) =>{
+      if (idx === this.size[1]-1) return "beta"
+      return this.basis.includes(idx) ? `x_${idx+1}*` : `x_${idx+1}`;
+    })
     return `Table:\n${createBeautifulTable(this.table, basises)}`
   }
 }
