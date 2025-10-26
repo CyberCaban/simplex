@@ -1,8 +1,8 @@
 import Fraction from "fraction.js";
 import LP from "./lp.json"
 import { Matrix, parseTask, Task } from "./types";
-import { BasisExpressions } from "./BasisExpressions";
-import { SimplexTable } from "./SimplexTable";
+import { prepareExpressions } from "./BasisExpressions";
+import { SimplexSolver } from "./SimplexTable";
 
 // @ts-ignore
 Fraction.prototype.toString = Fraction.prototype.toFraction
@@ -18,7 +18,7 @@ export function createBeautifulTable(matrix: Fraction[][], headers: string[] | n
 
   const rows = matrix.map(row =>
     '| ' + row.map((cell, i) =>
-      cell.toString().padEnd(colWidths[i])
+      cell.toString().padStart(colWidths[i])
     ).join(' | ') + ' |'
   );
 
@@ -42,19 +42,9 @@ function tryExpr<T>(fallibleFn: () => T): Result<T, Error> {
     return [null, e] as [null, Error]
   }
 }
-function expressBasisVariables(matrix: Matrix, basis: number[]): BasisExpressions {
-  const basisExpressions = new BasisExpressions(matrix, basis)
-  return basisExpressions
-}
-function addArrays(arr1: number[], arr2: number[]): number[] {
-  const result = arr1.slice()
-  for (let i = 0; i < arr1.length; i++) {
-    result[i] += arr2[i]
-  }
-  return result
-}
-export function substituteFn(basisExpressions: BasisExpressions, basis: number[], fn: Fraction[]): Fraction[] {
-  const matrix = basisExpressions.solvedGauss
+export function substituteFn(gaussSolved: Matrix, basis: number[], fn: Fraction[]): Fraction[] {
+  const basisExpressions = prepareExpressions(gaussSolved, basis)
+  const matrix = gaussSolved
   const cols = matrix[0].length - 1
   const rows = matrix.length
   const constantCol = cols
@@ -68,7 +58,7 @@ export function substituteFn(basisExpressions: BasisExpressions, basis: number[]
   }
   // substitute basis elements
   for (let i = 0; i < rows; i++) {
-    const basisVar = basisExpressions.get(i)
+    const basisVar = basisExpressions[i]
     const coeff = fn[basisVar.param]
     const multipliedExpr = basisVar.expression.map((it) => it.mul(coeff))
 
@@ -90,7 +80,7 @@ export function main() {
       const task = parseTask(t)
       console.log(task);
 
-      const table = new SimplexTable(task)
+      const table = new SimplexSolver(task)
       // while (table.chooseBranch() == "Intermediate Step") {
       table.simplexStep()
       // }

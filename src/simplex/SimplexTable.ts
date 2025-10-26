@@ -1,33 +1,32 @@
 import Fraction from "fraction.js";
-import { BasisExpressions } from "./BasisExpressions";
-import { LPTask } from "./types";
+import { LPTask, Matrix } from "./types";
 import { gaussWithBasis } from "./Gauss";
 import { createBeautifulTable, substituteFn } from "./utils";
 
 type SimplexBranch = "Success" | "No limit" | "Intermediate Step"
 type PivotElement = { row: number, col: number, ratio: Fraction };
-export class SimplexTable {
-  substitutedFn: Fraction[]
-  basisExpressions: BasisExpressions
+export class SimplexSolver {
   basis: number[]
   table: Fraction[][]
+  stepNumber: number
   constructor(lpTask: LPTask) {
-    const { constraints, basis, fn } = lpTask
+    const { constraints, basis, fn, isMaximization } = lpTask
+    const func = isMaximization ? fn.map(it => it.neg()) : fn
     const gaussSolved = gaussWithBasis(constraints, basis)
     this.basis = basis
-    this.basisExpressions = new BasisExpressions(gaussSolved, basis)
-    this.substitutedFn = substituteFn(this.basisExpressions, basis, fn)
-    this.table = this.initTable()
+    this.table = this.initTable(gaussSolved, basis, func)
+    this.stepNumber = 0
   }
-  private initTable(): Fraction[][] {
+  private initTable(gaussSolved: Matrix, basis: number[], fn: Fraction[]): Fraction[][] {
+    const substitutedFn = substituteFn(gaussSolved, basis, fn)
     const table: Fraction[][] = []
-    const [rows, cols] = [this.basisExpressions.solvedGauss.length, this.basisExpressions.solvedGauss[0].length]
+    const [rows, cols] = [gaussSolved.length, gaussSolved[0].length]
 
     for (let i = 0; i < rows; i++) {
-      table.push([...this.basisExpressions.solvedGauss[i]])
+      table.push([...gaussSolved[i]])
     }
 
-    const lastRow = this.substitutedFn.slice()
+    const lastRow = substitutedFn
     lastRow[lastRow.length - 1] = lastRow[lastRow.length - 1].neg()
     table.push(lastRow)
 
@@ -44,7 +43,7 @@ export class SimplexTable {
     return this.table.slice(0, this.table.length)
   }
   simplexStep() {
-    console.table(this.toString())
+    console.table(this.toStringVert())
     const branch = this.chooseBranch()
     switch (branch) {
       case "Success":
@@ -68,10 +67,10 @@ export class SimplexTable {
     const [rows, cols] = this.size
     const newTable: Fraction[][] = Array(rows)
       .fill(null)
-      .map(() => 
+      .map(() =>
         Array(cols)
           .fill(null)
-          .map(()=>
+          .map(() =>
             new Fraction(0)))
 
     const pivot = this.table[pivotRow][pivotCol]
@@ -83,7 +82,7 @@ export class SimplexTable {
     // newTable[pivotRow][swapCol] = invertedPivot
     // pivot row
     for (let i = 0; i < cols; i++) {
-        newTable[pivotRow][i] = this.table[pivotRow][i].div(pivot)
+      newTable[pivotRow][i] = this.table[pivotRow][i].div(pivot)
     }
     // pivot col
     // for (let i = 0; i < rows; i++) {
@@ -100,6 +99,7 @@ export class SimplexTable {
         )
       }
     }
+    this.stepNumber++
     this.table = newTable
   }
   findBestPivot(): PivotElement | null {
@@ -138,10 +138,34 @@ export class SimplexTable {
     return "Intermediate Step"
   }
   toString(): string {
-    const basises = new Array(this.size[1]).fill("").map((_, idx) =>{
-      if (idx === this.size[1]-1) return "beta"
-      return this.basis.includes(idx) ? `x_${idx+1}*` : `x_${idx+1}`;
+    const basises = new Array(this.size[1]).fill("").map((_, idx) => {
+      if (idx === this.size[1] - 1) return "beta"
+      return this.basis.includes(idx) ? `x_${idx + 1}*` : `x_${idx + 1}`;
     })
     return `Table:\n${createBeautifulTable(this.table, basises)}`
+  }
+  toStringVert(): string {
+    const basises = []
+    const [rows, cols] = this.size
+    const headerRow = new Array(cols).fill(null).map((_, idx) => {
+      if (idx === cols - 1) return "beta"
+      else return `x_${idx + 1}`
+    }).filter((_, idx) => !this.basis.includes(idx))
+    const header = ["", ...headerRow]
+    for (let i = 0; i < this.basis.length; i++) {
+      const basiCol = this.basis[i];
+      for (let j = 0; j < rows; j++) {
+        const el = this.table[j][basiCol]
+        if (el.equals(1)) {
+          const row = this.table[j].filter((_, idx) => !this.basis.includes(idx))
+          basises.push([`x_${basiCol + 1}`, ...row])
+          break
+        }
+      }
+    }
+    const filteredFn = this.table[rows - 1].filter((_, idx) => !this.basis.includes(idx))
+    basises.push(["fn", ...filteredFn])
+    // @ts-ignore
+    return createBeautifulTable(basises, header)
   }
 }
