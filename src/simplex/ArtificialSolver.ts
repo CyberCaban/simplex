@@ -1,5 +1,5 @@
 import Fraction from "fraction.js";
-import { Matrix, LPTask, Solution } from "./types";
+import { Matrix, LPTask, Solution } from "../types";
 import { SimplexSolver } from "./SimplexSolver";
 
 export class ArtificialBasisSolver {

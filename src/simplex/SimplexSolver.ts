@@ -1,5 +1,5 @@
 import Fraction from "fraction.js";
-import { Expression, LPTask, Matrix } from "./types";
+import { Expression, LPTask, Matrix } from "../types";
 import { gaussWithBasis } from "./Gauss";
 import { createBeautifulTable } from "./utils";
 

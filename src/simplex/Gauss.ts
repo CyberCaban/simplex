@@ -1,5 +1,5 @@
 import Fraction from "fraction.js";
-import { Matrix } from "./types";
+import { Matrix } from "../types";
 
 export function gaussWithBasis(matrix: Matrix, basis: number[]): Matrix {
   const result = matrix.map(row => [...row]);
