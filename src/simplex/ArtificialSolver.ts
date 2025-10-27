@@ -161,9 +161,7 @@ export class ArtificialBasisSolver {
       return;
     }
 
-    this.solution.forEach((value, index) => {
-      console.log(`x${index + 1} = ${value.toString()}`);
-    });
+    console.log(this.solution.map((value, index) => `x${index + 1} = ${value.toString()}`).join(", "))
 
     const objectiveValue = this.calculateObjectiveValue();
     console.log(`Target function: ${objectiveValue.toString()}`);
