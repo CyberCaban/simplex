@@ -12,15 +12,24 @@ export type Task = {
   }
 }
 
+export type ArtificialBasisResult = {
+  solution: Fraction[];
+  value: Fraction;
+  hasSolution: boolean;
+  phase1Value: Fraction;
+}
+
+export type Solution = {
+  solution: Fraction[];
+  value: Fraction;
+  hasSolution: boolean;
+}
+
 export type LPTask = {
   "fn": Fraction[]
   "constraints": Fraction[][],
   "basis": number[],
   isMaximization: boolean,
-}
-
-export type SimplexSolution = {
-
 }
 
 export function parseTask(task: Task): LPTask {

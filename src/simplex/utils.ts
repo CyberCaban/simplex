@@ -1,8 +1,7 @@
 import Fraction from "fraction.js";
 import LP from "./lp.json"
-import { Matrix, parseTask, Task } from "./types";
-import { prepareExpressions } from "./BasisExpressions";
-import { SimplexSolver } from "./SimplexTable";
+import { parseTask, Task } from "./types";
+import { ArtificialBasisSolver } from "./ArtificialSolver";
 
 // @ts-ignore
 Fraction.prototype.toString = Fraction.prototype.toFraction
@@ -52,9 +51,10 @@ export function main() {
       const task = parseTask(t)
       console.log(task);
 
-      const table = new SimplexSolver(task)
+      const table = new ArtificialBasisSolver(task)
       // while (table.chooseBranch() == "Intermediate Step") {
-      table.simplexStep()
+      table.solve()
+      table.printSolution()
       // }
     })
   })

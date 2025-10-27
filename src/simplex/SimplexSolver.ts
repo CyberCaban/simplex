@@ -23,7 +23,7 @@ export class SimplexSolver {
     this.table = this.initTable(gaussSolved, basis, func)
     this.stepNumber = 0
   }
-  private initTable(gaussSolved: Matrix, basis: number[], fn: Fraction[]): Fraction[][] {
+  protected initTable(gaussSolved: Matrix, basis: number[], fn: Fraction[]): Fraction[][] {
     const substitutedFn = this.substituteFn(gaussSolved, basis, fn)
     const table: Fraction[][] = []
     const [rows, cols] = [gaussSolved.length, gaussSolved[0].length]
@@ -48,7 +48,7 @@ export class SimplexSolver {
   get constraints(): Fraction[][] {
     return this.table.slice(0, this.table.length)
   }
-  simplexStep() {
+  simplexStep(): Fraction {
     console.table(this.toStringVert())
     const branch = this.chooseBranch()
     switch (branch) {
@@ -60,11 +60,11 @@ export class SimplexSolver {
         throw Error(`Function ${this.fn} has no lower bound`)
       case "Intermediate Step":
         this.calculateStep()
-        this.simplexStep()
-        break
+        return this.simplexStep()
       default:
         break;
     }
+    throw Error("Something went wrong")
   }
   calculateStep() {
     const bestPivot = this.findBestPivot()
@@ -235,5 +235,46 @@ export class SimplexSolver {
     basises.push(["fn", ...filteredFn])
     // @ts-ignore
     return createBeautifulTable(basises, header)
+  }
+}
+
+
+export class ExtendedSimplexSolver extends SimplexSolver {
+  // Добавляем метод для получения текущего состояния
+  getCurrentState() {
+    return {
+      basis: this.basis,
+      table: this.table,
+      stepNumber: this.stepNumber
+    };
+  }
+
+  // Метод для принудительного установления базиса
+  setBasis(newBasis: number[]): void {
+    this.basis = newBasis;
+    // Пересчитываем таблицу для нового базиса
+    const gaussSolved = gaussWithBasis(
+      this.table.slice(0, -1).map(row => row.slice(0, -1).concat(row[row.length - 1])),
+      newBasis
+    );
+    this.table = this.initTable(gaussSolved, newBasis, this.fn.slice(0, -1));
+  }
+}
+
+export function needsArtificialBasis(lpTask: LPTask): boolean {
+  const { constraints, basis } = lpTask;
+
+  for (let i = 0; i < basis.length; i++) {
+    const betaValue = constraints[i][constraints[i].length - 1];
+    if (betaValue.lt(0)) {
+      return true;
+    }
+  }
+
+  try {
+    new SimplexSolver(lpTask);
+    return false;
+  } catch {
+    return true;
   }
 }
