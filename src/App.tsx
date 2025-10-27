@@ -1,11 +1,13 @@
 import { useState, useRef } from 'react';
-import { LPTask } from './types';
+import { LPTask, TaskFromFile } from './types';
 import { TaskInput } from './components/TaskInput';
 import { SolutionView } from './components/SolutionView';
 import { StepByStepView } from './components/StepByStepView';
 import './App.css';
 import { ExtendedSimplexSolver, needsArtificialBasis, SimplexSolver } from './simplex/SimplexSolver';
 import { ArtificialBasisSolver } from './simplex/ArtificialSolver';
+import { TaskLibrary } from './components/TaskLibrary';
+import { FileOperations } from './components/FileOperations';
 
 type SolutionMode = 'auto' | 'step-by-step';
 type SolverType = 'simplex' | 'artificial';
@@ -17,6 +19,7 @@ export default function App() {
   const [solution, setSolution] = useState<any>(null);
   const [error, setError] = useState<string>('');
   const [isSolving, setIsSolving] = useState(false);
+  const [loadedTasks, setLoadedTasks] = useState<TaskFromFile[]>([]);
 
   const simplexSolverRef = useRef<ExtendedSimplexSolver | null>(null);
   const artificialSolverRef = useRef<ArtificialBasisSolver | null>(null);
@@ -27,6 +30,16 @@ export default function App() {
     setError('');
     simplexSolverRef.current = null;
     artificialSolverRef.current = null;
+  };
+
+  const handleTasksLoaded = (tasks: TaskFromFile[]) => {
+    setLoadedTasks(tasks);
+  };
+
+  const handleTaskSelected = (selectedTask: LPTask) => {
+    setTask(selectedTask);
+    setSolution(null);
+    setError('');
   };
 
   const solveAuto = async () => {
@@ -124,63 +137,76 @@ export default function App() {
       </header>
 
       <div className="app-content">
-        <div className="control-panel">
-          <TaskInput onSubmit={handleTaskSubmit} />
+        <div className="main-layout">
+          <div className="left-panel">
+            <TaskLibrary onTaskSelect={handleTaskSelected} />
+            <FileOperations
+              currentTask={task}
+              onTasksLoaded={handleTasksLoaded}
+              onTaskSelected={handleTaskSelected}
+            />
+          </div>
 
-          <div className="solution-controls">
-            <div className="mode-selectors">
-              <div className="selector-group">
-                <label>Solution Mode:</label>
-                <select
-                  value={solutionMode}
-                  onChange={(e) => setSolutionMode(e.target.value as SolutionMode)}
-                >
-                  <option value="auto">Auto</option>
-                  <option value="step-by-step">Step by Step</option>
-                </select>
-              </div>
+          <div className="right-panel">
+            <div className="control-panel">
+              <TaskInput onSubmit={handleTaskSubmit} />
 
-              <div className="selector-group">
-                <label>Solver Type:</label>
-                <select
-                  value={solverType}
-                  onChange={(e) => setSolverType(e.target.value as SolverType)}
+              <div className="solution-controls">
+                <div className="mode-selectors">
+                  <div className="selector-group">
+                    <label>Solution Mode:</label>
+                    <select
+                      value={solutionMode}
+                      onChange={(e) => setSolutionMode(e.target.value as SolutionMode)}
+                    >
+                      <option value="auto">Auto</option>
+                      <option value="step-by-step">Step by Step</option>
+                    </select>
+                  </div>
+
+                  <div className="selector-group">
+                    <label>Solver Type:</label>
+                    <select
+                      value={solverType}
+                      onChange={(e) => setSolverType(e.target.value as SolverType)}
+                    >
+                      <option value="simplex">Simplex</option>
+                      <option value="artificial">Artificial Basis</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSolve}
+                  disabled={!task || isSolving}
+                  className="solve-button"
                 >
-                  <option value="simplex">Simplex</option>
-                  <option value="artificial">Artificial Basis</option>
-                </select>
+                  {isSolving ? 'Solving...' : 'Solve'}
+                </button>
               </div>
             </div>
 
-            <button
-              onClick={handleSolve}
-              disabled={!task || isSolving}
-              className="solve-button"
-            >
-              {isSolving ? 'Solving...' : 'Solve'}
-            </button>
-          </div>
-        </div>
+            {error && (
+              <div className="error-message">
+                Error: {error}
+              </div>
+            )}
 
-        {error && (
-          <div className="error-message">
-            Error: {error}
-          </div>
-        )}
-
-        {solution && (
-          <div className="solution-container">
-            {solution.stepByStepMode ? (
-              <StepByStepView
-                solution={solution}
-                onAction={handleStepByStepAction}
-                solver={simplexSolverRef.current}
-              />
-            ) : (
-              <SolutionView solution={solution} task={task} />
+            {solution && (
+              <div className="solution-container">
+                {solution.stepByStepMode ? (
+                  <StepByStepView
+                    solution={solution}
+                    onAction={handleStepByStepAction}
+                    solver={simplexSolverRef.current}
+                  />
+                ) : (
+                  <SolutionView solution={solution} task={task} />
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

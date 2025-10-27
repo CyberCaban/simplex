@@ -1,6 +1,6 @@
 import Fraction from "fraction.js";
 import LP from "./lp.json"
-import { parseTask, Task } from "../types";
+import { parseTask, TaskFromFile } from "../types";
 import { ArtificialBasisSolver } from "./ArtificialSolver";
 
 // @ts-ignore
@@ -44,7 +44,7 @@ function tryExpr<T>(fallibleFn: () => T): Result<T, Error> {
 
 export function main() {
   console.clear()
-  const tasks: Task[] = LP as Task[]
+  const tasks: TaskFromFile[] = LP as TaskFromFile[]
   const [results, err] = tryExpr(() => {
 
     tasks.map((t) => {
