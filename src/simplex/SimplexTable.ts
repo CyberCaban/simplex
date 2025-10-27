@@ -1,10 +1,16 @@
 import Fraction from "fraction.js";
-import { LPTask, Matrix } from "./types";
+import { Expression, LPTask, Matrix } from "./types";
 import { gaussWithBasis } from "./Gauss";
-import { createBeautifulTable, substituteFn } from "./utils";
+import { createBeautifulTable } from "./utils";
 
 type SimplexBranch = "Success" | "No limit" | "Intermediate Step"
 type PivotElement = { row: number, col: number, ratio: Fraction };
+type SimplexTable = {
+  stepNumber: number,
+  basis: number[],
+  matrix: Fraction[][],
+  pivot: PivotElement
+}
 export class SimplexSolver {
   basis: number[]
   table: Fraction[][]
@@ -18,7 +24,7 @@ export class SimplexSolver {
     this.stepNumber = 0
   }
   private initTable(gaussSolved: Matrix, basis: number[], fn: Fraction[]): Fraction[][] {
-    const substitutedFn = substituteFn(gaussSolved, basis, fn)
+    const substitutedFn = this.substituteFn(gaussSolved, basis, fn)
     const table: Fraction[][] = []
     const [rows, cols] = [gaussSolved.length, gaussSolved[0].length]
 
@@ -136,6 +142,68 @@ export class SimplexSolver {
       }
     }
     return "Intermediate Step"
+  }
+  private prepareExpressions(matrix: Matrix, basis: number[]): Expression[] {
+    const result: Expression[] = []
+    const rows = matrix.length;
+    const cols = matrix[0].length - 1;
+
+    for (let b = 0; b < basis.length; b++) {
+      const basisParam = basis[b]
+      let expression: Fraction[] = new Array(cols + 1).fill(null).map(() => new Fraction(0)) // +1 для константы
+
+      let foundRow = -1;
+      for (let i = 0; i < rows; i++) {
+        if (!matrix[i][basisParam].equals(0)) {
+          foundRow = i;
+          break;
+        }
+      }
+
+      if (foundRow === -1) continue;
+
+      const coeff = matrix[foundRow][basisParam];
+      for (let j = 0; j < cols; j++) {
+        if (j !== basisParam) {
+          expression[j] = matrix[foundRow][j].neg();
+        }
+      }
+      expression[basisParam] = new Fraction(1)
+
+      result.push({
+        param: basisParam,
+        expression
+      })
+    }
+    return result
+  }
+  private substituteFn(gaussSolved: Matrix, basis: number[], fn: Fraction[]): Fraction[] {
+    const basisExpressions = this.prepareExpressions(gaussSolved, basis)
+    const matrix = gaussSolved
+    const cols = matrix[0].length - 1
+    const rows = matrix.length
+    const constantCol = cols
+    // function substitution
+    const substitutedFn: Fraction[] = new Array(cols + 1).fill(new Fraction(0))
+    // fill from original fn without substituted elements
+    for (let i = 0; i < cols; i++) {
+      if (!basis.includes(i)) {
+        substitutedFn[i] = fn[i]
+      }
+    }
+    // substitute basis elements
+    for (let i = 0; i < rows; i++) {
+      const basisVar = basisExpressions[i]
+      const coeff = fn[basisVar.param]
+      const multipliedExpr = basisVar.expression.map((it) => it.mul(coeff))
+
+      for (let j = 0; j < cols; j++) {
+        if (!basis.includes(j))
+          substitutedFn[j] = substitutedFn[j].add(multipliedExpr[j])
+      }
+      substitutedFn[constantCol] = substitutedFn[constantCol].add(matrix[i][constantCol].mul(coeff))
+    }
+    return substitutedFn
   }
   toString(): string {
     const basises = new Array(this.size[1]).fill("").map((_, idx) => {

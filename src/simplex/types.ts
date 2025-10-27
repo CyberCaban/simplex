@@ -1,6 +1,7 @@
 import Fraction from "fraction.js"
 
 export type Matrix = Fraction[][];
+export type Expression = { param: number, expression: Fraction[] };
 
 export type Task = {
   "task": {

@@ -42,34 +42,6 @@ function tryExpr<T>(fallibleFn: () => T): Result<T, Error> {
     return [null, e] as [null, Error]
   }
 }
-export function substituteFn(gaussSolved: Matrix, basis: number[], fn: Fraction[]): Fraction[] {
-  const basisExpressions = prepareExpressions(gaussSolved, basis)
-  const matrix = gaussSolved
-  const cols = matrix[0].length - 1
-  const rows = matrix.length
-  const constantCol = cols
-  // function substitution
-  const substitutedFn: Fraction[] = new Array(cols + 1).fill(new Fraction(0))
-  // fill from original fn without substituted elements
-  for (let i = 0; i < cols; i++) {
-    if (!basis.includes(i)) {
-      substitutedFn[i] = fn[i]
-    }
-  }
-  // substitute basis elements
-  for (let i = 0; i < rows; i++) {
-    const basisVar = basisExpressions[i]
-    const coeff = fn[basisVar.param]
-    const multipliedExpr = basisVar.expression.map((it) => it.mul(coeff))
-
-    for (let j = 0; j < cols; j++) {
-      if (!basis.includes(j))
-        substitutedFn[j] = substitutedFn[j].add(multipliedExpr[j])
-    }
-    substitutedFn[constantCol] = substitutedFn[constantCol].add(matrix[i][constantCol].mul(coeff))
-  }
-  return substitutedFn
-}
 
 export function main() {
   console.clear()
