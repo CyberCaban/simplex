@@ -1,0 +1,12 @@
+{
+  "numVariables": 3,
+  "numConstraints": 2,
+  "isMaximization": false,
+  "fnCoeffs": ["2", "3", "1"],
+  "constraints": [
+    ["1", "2", "1", "8"],
+    ["2", "1", "1", "10"]
+  ],
+  "basis": [false, true, true],
+  "useArtificialBasis": false
+}
