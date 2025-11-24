@@ -56,18 +56,23 @@ export class SimplexSolver {
         return this.table[rows - 1][cols - 1].neg();
 
       case "No limit":
-        throw Error(`Function ${this.fn} has no lower bound`);
+        throw Error(
+          `Целевая функция не ограничена снизу: задача не имеет оптимального решения`,
+        );
       case "Intermediate Step":
         this.calculateStep();
         return this.simplexStep();
       default:
         break;
     }
-    throw Error("Something went wrong");
+    throw Error("Произошла непредвиденная ошибка при решении задачи");
   }
   calculateStep() {
     const bestPivot = this.findBestPivot();
-    if (bestPivot === null) throw Error("Опорный элемент не найден");
+    if (bestPivot === null)
+      throw Error(
+        "Не найден допустимый опорный элемент для продолжения решения",
+      );
     const { row: pivotRow, col: pivotCol } = bestPivot;
     const [rows, cols] = this.size;
     const newTable: Fraction[][] = Array(rows)
@@ -124,7 +129,10 @@ export class SimplexSolver {
       }
     }
     let bestPivot = possiblePivots[0];
-    if (bestPivot == null) throw Error("No pivots");
+    if (bestPivot == null)
+      throw Error(
+        "Не найдено допустимых опорных элементов: все коэффициенты отрицательных переменных неположительны",
+      );
     for (let i = 0; i < possiblePivots.length; i++) {
       if (bestPivot.ratio.gt(possiblePivots[i].ratio))
         bestPivot = possiblePivots[i];

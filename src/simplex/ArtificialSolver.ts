@@ -47,7 +47,7 @@ export class ArtificialBasisSolver {
       constraints: newConstraints,
       basis: artificialBasis,
       fn: artificialFn,
-      isMaximization: false
+      isMaximization: false,
     };
   }
 
@@ -59,15 +59,16 @@ export class ArtificialBasisSolver {
       const artificialValue = phase1Solver.simplexStep();
       if (artificialValue.abs().valueOf() > 1e-10) {
         this.hasSolution = false;
-        return { solution: [], value: new Fraction(0), hasSolution: false };
+        throw Error(
+          `Система ограничений несовместна: сумма искусственных переменных = ${artificialValue.toFraction()} ≠ 0. Задача не имеет допустимых решений.`,
+        );
       }
       this.hasSolution = true;
       return this.solvePhase2(phase1Solver);
-
-    } catch (error) {
-      console.log("Error when solving artificial task:", error);
+    } catch (error: any) {
+      console.log("Ошибка при решении задачи с искусственным базисом:", error);
       this.hasSolution = false;
-      return { solution: [], value: new Fraction(0), hasSolution: false };
+      throw error;
     }
   }
 
@@ -75,15 +76,23 @@ export class ArtificialBasisSolver {
     // original phase
     const { basis } = phase1Solver;
     const totalOriginalVars = this.originalTask.constraints[0].length - 1;
-    const filteredBasis = basis.filter(basisIndex => basisIndex < totalOriginalVars);
+    const filteredBasis = basis.filter(
+      (basisIndex) => basisIndex < totalOriginalVars,
+    );
     const neededBasisSize = this.originalTask.constraints.length;
     let finalBasis = [...filteredBasis];
 
     if (filteredBasis.length < neededBasisSize) {
-      const availableVars = Array.from({ length: totalOriginalVars }, (_, i) => i)
-        .filter(i => !filteredBasis.includes(i));
+      const availableVars = Array.from(
+        { length: totalOriginalVars },
+        (_, i) => i,
+      ).filter((i) => !filteredBasis.includes(i));
 
-      for (let i = filteredBasis.length; i < neededBasisSize && availableVars.length > 0; i++) {
+      for (
+        let i = filteredBasis.length;
+        i < neededBasisSize && availableVars.length > 0;
+        i++
+      ) {
         finalBasis.push(availableVars.shift()!);
       }
     }
@@ -92,7 +101,7 @@ export class ArtificialBasisSolver {
       constraints: this.originalTask.constraints,
       basis: finalBasis,
       fn: this.originalTask.fn,
-      isMaximization: this.originalTask.isMaximization
+      isMaximization: this.originalTask.isMaximization,
     };
 
     try {
@@ -106,16 +115,20 @@ export class ArtificialBasisSolver {
       return {
         solution: this.solution,
         value: optimalValue,
-        hasSolution: true
+        hasSolution: true,
       };
-
-    } catch (error) {
-      console.log("Ошибка при решении оригинальной задачи:", error);
-      return { solution: [], value: new Fraction(0), hasSolution: false };
+    } catch (error: any) {
+      console.log("Ошибка при решении оригинальной задачи (фаза II):", error);
+      throw Error(
+        `Ошибка на второй фазе метода искусственного базиса: ${error.message}`,
+      );
     }
   }
 
-  private extractSolution(solver: SimplexSolver, totalVars: number): Fraction[] {
+  private extractSolution(
+    solver: SimplexSolver,
+    totalVars: number,
+  ): Fraction[] {
     const solution: Fraction[] = new Array(totalVars).fill(new Fraction(0));
     const { basis, table } = solver;
     const rows = table.length - 1;
@@ -138,7 +151,7 @@ export class ArtificialBasisSolver {
     return {
       solution: this.solution,
       value: this.calculateObjectiveValue(),
-      hasSolution: this.hasSolution
+      hasSolution: this.hasSolution,
     };
   }
 
@@ -157,13 +170,17 @@ export class ArtificialBasisSolver {
 
   printSolution(): void {
     if (!this.hasSolution) {
-      console.error("No solution")
+      console.error("Задача не имеет решения");
       return;
     }
 
-    console.log(this.solution.map((value, index) => `x${index + 1} = ${value.toString()}`).join(", "))
+    console.log(
+      this.solution
+        .map((value, index) => `x${index + 1} = ${value.toString()}`)
+        .join(", "),
+    );
 
     const objectiveValue = this.calculateObjectiveValue();
-    console.log(`Target function: ${objectiveValue.toString()}`);
+    console.log(`Значение целевой функции: ${objectiveValue.toString()}`);
   }
 }

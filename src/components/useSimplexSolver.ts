@@ -48,36 +48,59 @@ export function useSimplexSolver() {
       const allSteps: StepData[] = [];
 
       if (useArtificialBasis || needsArtificialBasis(task)) {
-        const solver = new ArtificialBasisSolver(task);
-        const result = solver.solve();
+        try {
+          const solver = new ArtificialBasisSolver(task);
+          const result = solver.solve();
 
-        if (result.hasSolution) {
+          if (result.hasSolution) {
+            allSteps.push({
+              stepNumber: 0,
+              basis: [],
+              table: [],
+              possiblePivots: [],
+              isComplete: true,
+              value: result.value,
+              message: `Решение найдено методом искусственного базиса\n${result.solution
+                .map((v, i) => `x${i + 1} = ${v.toFraction()}`)
+                .join(
+                  ", ",
+                )}\nЗначение целевой функции: ${result.value.toFraction()}`,
+            });
+          } else {
+            allSteps.push({
+              stepNumber: 0,
+              basis: [],
+              table: [],
+              possiblePivots: [],
+              isComplete: true,
+              message:
+                "Задача не имеет решения: система ограничений несовместна или искусственные переменные не удалось исключить",
+            });
+          }
+        } catch (e: any) {
           allSteps.push({
             stepNumber: 0,
             basis: [],
             table: [],
             possiblePivots: [],
             isComplete: true,
-            value: result.value,
-            message: `Решение найдено методом искусственного базиса\n${result.solution
-              .map((v, i) => `x${i + 1} = ${v.toFraction()}`)
-              .join(
-                ", ",
-              )}\nЗначение целевой функции: ${result.value.toFraction()}`,
-          });
-        } else {
-          allSteps.push({
-            stepNumber: 0,
-            basis: [],
-            table: [],
-            possiblePivots: [],
-            isComplete: true,
-            message: "Задача не имеет решения (метод искусственного базиса)",
+            message: `Ошибка при решении: ${e.message}`,
           });
         }
       } else {
         const solver = new SimplexSolver(task);
         let stepNum = 0;
+
+        // Добавляем начальную таблицу
+        const initialState = solver.getCurrentState();
+        allSteps.push({
+          stepNumber: 0,
+          basis: [...initialState.basis],
+          table: initialState.table.map((row: Fraction[]) => [...row]),
+          possiblePivots: [],
+          isComplete: false,
+          message: "Начальная симплекс-таблица",
+        });
 
         while (true) {
           const branch = solver.chooseBranch();
@@ -102,29 +125,43 @@ export function useSimplexSolver() {
               table: currentState.table.map((row: Fraction[]) => [...row]),
               possiblePivots: [],
               isComplete: true,
-              message: "Целевая функция не ограничена",
+              message:
+                "Целевая функция не ограничена снизу: задача не имеет оптимального решения",
             });
             break;
           } else {
             const pivot = solver.findBestPivot();
-            if (!pivot) break;
+            if (!pivot) {
+              allSteps.push({
+                stepNumber: stepNum,
+                basis: [...currentState.basis],
+                table: currentState.table.map((row: Fraction[]) => [...row]),
+                possiblePivots: [],
+                isComplete: true,
+                message: "Ошибка: не найден опорный элемент",
+              });
+              break;
+            }
+
+            stepNum++;
+            solver.calculateStep();
+
+            const newState = solver.getCurrentState();
             allSteps.push({
               stepNumber: stepNum,
-              basis: [...currentState.basis],
-              table: currentState.table.map((row: Fraction[]) => [...row]),
+              basis: [...newState.basis],
+              table: newState.table.map((row: Fraction[]) => [...row]),
               possiblePivots: [pivot],
               selectedPivot: { row: pivot.row, col: pivot.col },
               isComplete: false,
+              message: `Шаг ${stepNum}: опорный элемент в строке ${pivot.row + 1}, столбце x${pivot.col + 1}`,
             });
-
-            solver.calculateStep();
-            stepNum++;
           }
         }
       }
 
       setSteps(allSteps);
-      setCurrentStepIndex(allSteps.length - 1);
+      setCurrentStepIndex(0);
       return true;
     } catch (e: any) {
       setError(`Ошибка при решении: ${e.message}`);
@@ -132,16 +169,9 @@ export function useSimplexSolver() {
     }
   };
 
-  const startStepMode = (task: LPTask, useArtificialBasis: boolean) => {
+  const startStepMode = (task: LPTask) => {
     setError("");
     try {
-      if (useArtificialBasis || needsArtificialBasis(task)) {
-        setError(
-          "Пошаговый режим доступен только для задач с заданным допустимым базисом",
-        );
-        return false;
-      }
-
       const solver = new SimplexSolver(task);
       const initialState = solver.getCurrentState();
       const branch = solver.chooseBranch();
@@ -171,6 +201,7 @@ export function useSimplexSolver() {
           table: initialState.table.map((row: Fraction[]) => [...row]),
           possiblePivots,
           isComplete: false,
+          message: "Начальная симплекс-таблица. Выберите опорный элемент.",
         },
       ]);
       setCurrentStepIndex(0);
@@ -277,7 +308,7 @@ export function useSimplexSolver() {
           },
         ];
         setSteps(newSteps);
-        setCurrentStepIndex(newSteps.length - 1);
+        setCurrentStepIndex(currentStepIndex + 1);
       } else if (branch === "No limit") {
         const newSteps = [
           ...steps.slice(0, currentStepIndex + 1),
@@ -291,11 +322,12 @@ export function useSimplexSolver() {
             table: newState.table.map((row: Fraction[]) => [...row]),
             possiblePivots: [],
             isComplete: true,
-            message: "Целевая функция не ограничена",
+            message:
+              "Целевая функция не ограничена снизу: задача не имеет оптимального решения",
           },
         ];
         setSteps(newSteps);
-        setCurrentStepIndex(newSteps.length - 1);
+        setCurrentStepIndex(currentStepIndex + 1);
       } else {
         const possiblePivots = findAllPossiblePivots(solver);
         const newSteps = [
@@ -310,10 +342,11 @@ export function useSimplexSolver() {
             table: newState.table.map((row: Fraction[]) => [...row]),
             possiblePivots,
             isComplete: false,
+            message: "Выберите опорный элемент для следующего шага",
           },
         ];
         setSteps(newSteps);
-        setCurrentStepIndex(newSteps.length - 1);
+        setCurrentStepIndex(currentStepIndex + 1);
       }
     } catch (e: any) {
       setError(`Ошибка: ${e.message}`);

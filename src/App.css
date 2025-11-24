@@ -11,7 +11,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-image: url("./assets/background_1.jpg");
+  background-image: url("./assets/topbar_1.png");
   background-size: cover;
   min-width: 320px;
   min-height: 100vh;
@@ -27,6 +27,8 @@ main {
 #root {
   width: 80%;
   height: 90%;
+  margin-top: 5rem;
+  margin-bottom: 5rem;
   padding: 0rem 0rem 2rem 0rem;
   border-radius: 20px;
   background-color: rgba(41, 41, 41, 0.9);

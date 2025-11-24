@@ -5,6 +5,8 @@ import Fraction from "fraction.js";
 import { LPTask } from "./simplex/types";
 import { SimplexTable } from "./components/SimplexTable";
 import { useSimplexSolver } from "./components/useSimplexSolver";
+import LP from "./simplex/lp.json";
+import { parseTask, Task } from "./simplex/types";
 
 function App() {
   const [isMaximization, setIsMaximization] = useState(false);
@@ -101,7 +103,7 @@ function App() {
     if (isAutoMode) {
       solveAuto(task, useArtificialBasis);
     } else {
-      startStepMode(task, useArtificialBasis);
+      startStepMode(task);
     }
   };
 
@@ -157,6 +159,46 @@ function App() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const loadExample = (exampleIndex: number) => {
+    try {
+      const tasks: Task[] = LP as Task[];
+      if (exampleIndex < 0 || exampleIndex >= tasks.length) {
+        setError("Неверный номер примера");
+        return;
+      }
+
+      const task = parseTask(tasks[exampleIndex]);
+      setNumVariables(task.fn.length);
+      setNumConstraints(task.constraints.length);
+      setIsMaximization(task.isMaximization);
+      setFnCoeffs(task.fn.map((f) => f.toFraction()));
+      setConstraintsData(
+        task.constraints.map((row) => row.map((c) => c.toFraction())),
+      );
+
+      const newBasisSelection = Array(task.fn.length).fill(false);
+      if (
+        task.basis.length > 0 &&
+        task.basis.length === task.constraints.length
+      ) {
+        task.basis.forEach((idx) => {
+          if (idx < task.fn.length) {
+            newBasisSelection[idx] = true;
+          }
+        });
+        setBasisSelection(newBasisSelection);
+        setUseArtificialBasis(false);
+      } else {
+        setBasisSelection(newBasisSelection);
+        setUseArtificialBasis(true);
+      }
+
+      reset();
+    } catch (e: any) {
+      setError(`Ошибка загрузки примера: ${e.message}`);
+    }
   };
 
   return (
@@ -419,6 +461,44 @@ function App() {
         <div
           style={{
             marginTop: "1rem",
+            padding: "1rem",
+            backgroundColor: "rgba(29, 29, 29, 0.8)",
+            borderRadius: "8px",
+          }}
+        >
+          <h3>Примеры задач из библиотеки:</h3>
+          <div
+            style={{
+              display: "flex",
+              gap: "0.5rem",
+              flexWrap: "wrap",
+              marginTop: "0.5rem",
+            }}
+          >
+            {LP.map((example, idx) => (
+              <button
+                key={idx}
+                onClick={() => loadExample(idx)}
+                style={{
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.9rem",
+                }}
+                title={(example as any).comment || `Пример ${idx + 1}`}
+              >
+                Пример {idx + 1}
+              </button>
+            ))}
+          </div>
+          <div
+            style={{ fontSize: "0.85rem", marginTop: "0.5rem", opacity: 0.7 }}
+          >
+            Примеры из учебных задач с разными типами решений
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginTop: "1rem",
             display: "flex",
             gap: "1rem",
             flexWrap: "wrap",
@@ -511,14 +591,42 @@ function App() {
                 : `Шаг ${currentStep.stepNumber}`}
             </h2>
 
+            {currentStep.basis.length > 0 && (
+              <div
+                style={{
+                  marginTop: "0.5rem",
+                  padding: "0.5rem",
+                  backgroundColor: "rgba(50, 50, 50, 0.3)",
+                  borderRadius: "4px",
+                  fontSize: "0.9rem",
+                }}
+              >
+                <strong>Текущий базис:</strong>{" "}
+                {currentStep.basis.map((b) => `x${b + 1}`).join(", ")}
+              </div>
+            )}
+
             {currentStep.message && (
               <div
                 style={{
                   whiteSpace: "pre-line",
                   marginTop: "1rem",
                   padding: "1rem",
-                  backgroundColor: "rgba(100, 200, 100, 0.2)",
+                  backgroundColor: currentStep.isComplete
+                    ? currentStep.message.includes("не имеет") ||
+                      currentStep.message.includes("не ограничена") ||
+                      currentStep.message.includes("Ошибка")
+                      ? "rgba(200, 100, 100, 0.3)"
+                      : "rgba(100, 200, 100, 0.2)"
+                    : "rgba(100, 150, 255, 0.2)",
                   borderRadius: "8px",
+                  border: currentStep.isComplete
+                    ? currentStep.message.includes("не имеет") ||
+                      currentStep.message.includes("не ограничена") ||
+                      currentStep.message.includes("Ошибка")
+                      ? "1px solid rgba(255, 100, 100, 0.5)"
+                      : "1px solid rgba(100, 255, 100, 0.3)"
+                    : "1px solid rgba(100, 150, 255, 0.3)",
                 }}
               >
                 {currentStep.message}
@@ -536,7 +644,7 @@ function App() {
               />
             )}
 
-            {!isAutoMode && steps.length > 1 && (
+            {steps.length > 1 && (
               <div
                 style={{
                   marginTop: "1rem",
@@ -565,7 +673,7 @@ function App() {
           </div>
         )}
 
-        {steps.length > 0 && isAutoMode && (
+        {steps.length > 0 && (
           <div
             style={{
               marginTop: "1rem",
@@ -574,22 +682,62 @@ function App() {
               borderRadius: "8px",
             }}
           >
-            <h3>История решения ({steps.length} шагов):</h3>
+            <h3>Все шаги решения ({steps.length}):</h3>
+            <div
+              style={{ fontSize: "0.9rem", marginBottom: "1rem", opacity: 0.8 }}
+            >
+              {isAutoMode
+                ? "Решение в автоматическом режиме. Используйте кнопки навигации выше для просмотра шагов или раскройте детали ниже."
+                : "Решение в пошаговом режиме. Используйте кнопки навигации выше для перехода между шагами."}
+              <br />
+              💡{" "}
+              <i>
+                Совет: Кликните "Перейти к этому шагу" чтобы просмотреть таблицу
+                выше
+              </i>
+            </div>
             {steps.map((step, idx) => (
-              <details key={idx} style={{ marginTop: "0.5rem" }}>
-                <summary style={{ cursor: "pointer" }}>
+              <details
+                key={idx}
+                style={{ marginTop: "0.5rem" }}
+                open={idx === currentStepIndex}
+              >
+                <summary
+                  style={{
+                    cursor: "pointer",
+                    padding: "0.5rem",
+                    backgroundColor:
+                      idx === currentStepIndex
+                        ? "rgba(100, 150, 255, 0.2)"
+                        : undefined,
+                    borderRadius: "4px",
+                  }}
+                >
                   {step.isComplete
-                    ? `Финальный результат`
-                    : `Шаг ${step.stepNumber}`}
+                    ? step.message?.includes("не имеет") ||
+                      step.message?.includes("не ограничена") ||
+                      step.message?.includes("Ошибка")
+                      ? "❌ " + (step.message?.split("\n")[0] || "Ошибка")
+                      : "✅ Финальный результат"
+                    : step.stepNumber === 0
+                      ? "🔵 Начальная таблица"
+                      : `📊 Шаг ${step.stepNumber}`}
+                  {idx === currentStepIndex && " (текущий)"}
                 </summary>
-                <div style={{ marginTop: "0.5rem" }}>
+                <div style={{ marginTop: "0.5rem", paddingLeft: "1rem" }}>
                   {step.message && (
                     <div
                       style={{
                         whiteSpace: "pre-line",
                         marginBottom: "0.5rem",
                         padding: "0.5rem",
-                        backgroundColor: "rgba(100, 200, 100, 0.2)",
+                        backgroundColor: step.isComplete
+                          ? step.message.includes("не имеет") ||
+                            step.message.includes("не ограничена") ||
+                            step.message.includes("Ошибка")
+                            ? "rgba(200, 100, 100, 0.2)"
+                            : "rgba(100, 200, 100, 0.2)"
+                          : "rgba(100, 150, 255, 0.1)",
                         borderRadius: "8px",
                       }}
                     >
@@ -604,6 +752,29 @@ function App() {
                       selectedPivot={step.selectedPivot}
                       isComplete={step.isComplete}
                     />
+                  )}
+                  {step.basis.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: "0.5rem",
+                        fontSize: "0.85rem",
+                        opacity: 0.7,
+                      }}
+                    >
+                      Базис: {step.basis.map((b) => `x${b + 1}`).join(", ")}
+                    </div>
+                  )}
+                  {step.selectedPivot && (
+                    <div
+                      style={{
+                        marginTop: "0.5rem",
+                        fontSize: "0.85rem",
+                        opacity: 0.7,
+                      }}
+                    >
+                      Опорный элемент: строка {step.selectedPivot.row + 1},
+                      столбец x{step.selectedPivot.col + 1}
+                    </div>
                   )}
                 </div>
               </details>
