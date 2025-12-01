@@ -11,6 +11,7 @@ export type StepData = {
   table: Fraction[][];
   possiblePivots: { row: number; col: number; ratio: Fraction }[];
   selectedPivot?: { row: number; col: number };
+  pendingPivot?: { row: number, col: number };
   isComplete: boolean;
   value?: Fraction;
   message?: string;
@@ -192,6 +193,9 @@ export function useSimplexSolver() {
         return true;
       }
 
+      if (branch === "No limit") {
+        throw Error("Целевая функция не ограничена снизу: задача не имеет оптимального решения")
+      }
       const possiblePivots = findAllPossiblePivots(solver);
       setSteps([
         {
@@ -289,7 +293,6 @@ export function useSimplexSolver() {
       const newState = solver.getCurrentState();
 
       if (branch === "Success") {
-        const value = solver.fn[solver.fn.length - 1].neg();
         const { values: xs, value: f } = solver.getCurrentPoint();
         const newSteps = [
           ...steps.slice(0, currentStepIndex + 1),
