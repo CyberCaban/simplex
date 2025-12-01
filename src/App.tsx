@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import "./App.css";
-import TopBarImg from "./assets/topbar_2.png";
+import TopBarImg from "./assets/topbar_2.webp";
 import Fraction from "fraction.js";
 import { LPTask } from "./simplex/types";
 import { SimplexTable } from "./components/SimplexTable";
@@ -19,6 +19,8 @@ function App() {
   const [constraintsData, setConstraintsData] = useState<string[][]>([]);
   const [basisSelection, setBasisSelection] = useState<boolean[]>([]);
 
+  const [isLoadingFromFile, setisLoadingFromFile] = useState(false);
+
   const {
     steps,
     currentStepIndex,
@@ -34,21 +36,64 @@ function App() {
   } = useSimplexSolver();
 
   useEffect(() => {
-    const newFn = Array(numVariables).fill("1");
-    const newConstraints = Array(numConstraints)
-      .fill(null)
-      .map(() => Array(numVariables + 1).fill("1"));
-    const newBasis = Array(numVariables).fill(false);
+    if (isLoadingFromFile) return;
 
-    setFnCoeffs(newFn);
-    setConstraintsData(newConstraints);
-    setBasisSelection(newBasis);
+    setFnCoeffs((prev) => {
+      const next = [...prev];
+      if (next.length > numVariables) {
+        return next.slice(0, numVariables);
+      }
+      if (next.length < numVariables) {
+        return next.concat(Array(numVariables - next.length).fill("1"))
+      }
+      return next;
+    })
+    setConstraintsData((prev) => {
+      let rows = [...prev];
+      if (rows.length > numConstraints) {
+        rows = rows.slice(0, numConstraints);
+      } else if (rows.length < numConstraints) {
+        const addRows = Array.from({ length: numConstraints - rows.length }, () =>
+          Array(numVariables + 1).fill("1"));
+        rows = rows.concat(addRows)
+      }
+      rows = rows.map((row) => {
+        let r = row ? [...row] : [];
+        if (r.length > numVariables + 1) {
+          r = r.slice(0, numVariables + 1);
+        } else if (r.length < numVariables + 1) {
+          r = r.concat(Array(numVariables + 1 - r.length).fill("1"));
+        }
+        return r;
+      });
+
+      return rows;
+    })
+    setBasisSelection((prev) => {
+      const next = [...prev];
+      if (next.length > numVariables) {
+        return next.slice(0, numVariables);
+      }
+      if (next.length < numVariables) {
+        return next.concat(Array(numVariables - next.length).fill(false));
+      }
+      return next;
+    });
+    // const newFn = Array(numVariables).fill("1");
+    // const newConstraints = Array(numConstraints)
+    //   .fill(null)
+    //   .map(() => Array(numVariables + 1).fill("1"));
+    // const newBasis = Array(numVariables).fill(false);
+
+    // setFnCoeffs(newFn);
+    // setConstraintsData(newConstraints);
+    // setBasisSelection(newBasis);
     reset();
-  }, [numVariables, numConstraints]);
+  }, [numVariables, numConstraints, isAutoMode]);
 
   const validateInput = (): string | null => {
     try {
-      for (let i = 0; i < fnCoeffs.length; i++) {
+      for (let i = 0; i < numVariables; i++) {
         new Fraction(fnCoeffs[i]);
       }
 
@@ -146,6 +191,7 @@ function App() {
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target?.result as string);
+        setisLoadingFromFile(true)
         setNumVariables(data.numVariables);
         setNumConstraints(data.numConstraints);
         setIsMaximization(data.isMaximization);
@@ -154,6 +200,7 @@ function App() {
         setBasisSelection(data.basis);
         setUseArtificialBasis(data.useArtificialBasis || false);
         reset();
+        setisLoadingFromFile(false)
       } catch (e: any) {
         setError(`Ошибка загрузки: ${e.message}`);
       }
@@ -207,7 +254,7 @@ function App() {
         <img src={TopBarImg} alt="" loading="lazy" />
       </div>
 
-      <div style={{ width: "90%", marginTop: "1rem" }}>
+      <div style={{ width: "90%", marginTop: "1rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <details style={{ marginBottom: "1rem" }}>
           <summary
             style={{
@@ -296,6 +343,9 @@ function App() {
             padding: "1rem",
             backgroundColor: "rgba(29, 29, 29, 0.8)",
             borderRadius: "8px",
+            display: "flex",
+            flexDirection: "column",
+            width: "90%",
           }}
         >
           <h3>Целевая функция:</h3>
@@ -303,8 +353,10 @@ function App() {
             style={{
               display: "flex",
               alignItems: "center",
+              alignSelf: "center",
               flexWrap: "wrap",
               gap: "0.5rem",
+              width: "90%",
             }}
           >
             <span>f(x) = </span>
@@ -316,7 +368,7 @@ function App() {
                 {i > 0 && <span>+</span>}
                 <input
                   type="text"
-                  style={{ width: "4rem" }}
+                  style={{ width: "4rem", textAlign: "end" }}
                   value={fnCoeffs[i] || "1"}
                   onChange={(e) => {
                     const newCoeffs = [...fnCoeffs];
@@ -347,6 +399,10 @@ function App() {
             padding: "1rem",
             backgroundColor: "rgba(29, 29, 29, 0.8)",
             borderRadius: "8px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            width: "90%",
           }}
         >
           <h3>Ограничения:</h3>
@@ -373,7 +429,7 @@ function App() {
                   {j > 0 && <span>+</span>}
                   <input
                     type="text"
-                    style={{ width: "4rem" }}
+                    style={{ width: "4rem", textAlign: "end" }}
                     value={constraintsData[i]?.[j] || "1"}
                     onChange={(e) => {
                       const newConstraints = [...constraintsData];
@@ -427,6 +483,7 @@ function App() {
               padding: "1rem",
               backgroundColor: "rgba(29, 29, 29, 0.8)",
               borderRadius: "8px",
+              width: "90%",
             }}
           >
             <h3>Выбор базисных переменных:</h3>
@@ -464,6 +521,7 @@ function App() {
             padding: "1rem",
             backgroundColor: "rgba(29, 29, 29, 0.8)",
             borderRadius: "8px",
+            width: "90%",
           }}
         >
           <h3>Примеры задач из библиотеки:</h3>
@@ -635,6 +693,7 @@ function App() {
 
             {currentStep.table.length > 0 && (
               <SimplexTable
+                isAutoMode={isAutoMode}
                 table={currentStep.table}
                 basis={currentStep.basis}
                 possiblePivots={currentStep.possiblePivots}
@@ -746,6 +805,7 @@ function App() {
                   )}
                   {step.table.length > 0 && (
                     <SimplexTable
+                      isAutoMode={isAutoMode}
                       table={step.table}
                       basis={step.basis}
                       possiblePivots={step.possiblePivots}

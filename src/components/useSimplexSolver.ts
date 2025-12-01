@@ -48,6 +48,7 @@ export function useSimplexSolver() {
       const allSteps: StepData[] = [];
 
       if (useArtificialBasis || needsArtificialBasis(task)) {
+        console.log("useArtificialBasis", needsArtificialBasis(task));
         try {
           const solver = new ArtificialBasisSolver(task);
           const result = solver.solve();
@@ -91,7 +92,6 @@ export function useSimplexSolver() {
         const solver = new SimplexSolver(task);
         let stepNum = 0;
 
-        // Добавляем начальную таблицу
         const initialState = solver.getCurrentState();
         allSteps.push({
           stepNumber: 0,
@@ -105,17 +105,16 @@ export function useSimplexSolver() {
         while (true) {
           const branch = solver.chooseBranch();
           const currentState = solver.getCurrentState();
-
+          const { values: xs, value: f } = solver.getCurrentPoint();
           if (branch === "Success") {
-            const value = solver.fn[solver.fn.length - 1].neg();
             allSteps.push({
               stepNumber: stepNum,
               basis: [...currentState.basis],
               table: currentState.table.map((row: Fraction[]) => [...row]),
               possiblePivots: [],
               isComplete: true,
-              value: value,
-              message: `Оптимальное решение найдено!\nЗначение: ${value.toFraction()}`,
+              value: f,
+              message: `Оптимальное решение найдено!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(", ")})`,
             });
             break;
           } else if (branch === "No limit") {
@@ -177,7 +176,7 @@ export function useSimplexSolver() {
       const branch = solver.chooseBranch();
 
       if (branch === "Success") {
-        const value = solver.fn[solver.fn.length - 1].neg();
+        const { values: xs, value: f } = solver.getCurrentPoint();
         setSteps([
           {
             stepNumber: 0,
@@ -185,8 +184,8 @@ export function useSimplexSolver() {
             table: initialState.table.map((row: Fraction[]) => [...row]),
             possiblePivots: [],
             isComplete: true,
-            value: value,
-            message: "Начальный базис уже оптимален!",
+            value: f,
+            message: `Базис уже оптимален!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(", ")})`,
           },
         ]);
         setCurrentStepIndex(0);
@@ -291,6 +290,7 @@ export function useSimplexSolver() {
 
       if (branch === "Success") {
         const value = solver.fn[solver.fn.length - 1].neg();
+        const { values: xs, value: f } = solver.getCurrentPoint();
         const newSteps = [
           ...steps.slice(0, currentStepIndex + 1),
           {
@@ -303,8 +303,8 @@ export function useSimplexSolver() {
             table: newState.table.map((row: Fraction[]) => [...row]),
             possiblePivots: [],
             isComplete: true,
-            value: value,
-            message: `Оптимальное решение найдено!\nЗначение: ${value.toFraction()}`,
+            value: f,
+            message: `Оптимальное решение найдено!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(", ")})`,
           },
         ];
         setSteps(newSteps);

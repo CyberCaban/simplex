@@ -6,6 +6,7 @@ type SimplexTableProps = {
   possiblePivots: { row: number; col: number; ratio: Fraction }[];
   selectedPivot?: { row: number; col: number };
   isComplete: boolean;
+  isAutoMode: boolean;
   onPivotClick?: (row: number, col: number) => void;
 };
 
@@ -15,6 +16,7 @@ export function SimplexTable({
   possiblePivots,
   selectedPivot,
   isComplete,
+  isAutoMode,
   onPivotClick,
 }: SimplexTableProps) {
   if (table.length === 0) return null;
@@ -71,10 +73,10 @@ export function SimplexTable({
                       style={{
                         ...cellStyle,
                         backgroundColor: isPivot
-                          ? "rgba(100, 200, 100, 0.3)"
+                          ? "rgba(200, 0, 0, 0.3)"
                           : isClickable
-                          ? "rgba(100, 150, 255, 0.2)"
-                          : undefined,
+                            ? "rgba(100, 150, 255, 0.2)"
+                            : undefined,
                         cursor: isClickable ? "pointer" : "default",
                       }}
                       onClick={() =>
@@ -100,7 +102,7 @@ export function SimplexTable({
           </tr>
         </tbody>
       </table>
-      {possiblePivots.length > 0 && !isComplete && (
+      {possiblePivots.length > 0 && !isComplete && isAutoMode && (
         <div style={{ marginTop: "0.5rem", fontSize: "0.9rem", fontStyle: "italic" }}>
           Кликните на подсвеченную ячейку для выбора опорного элемента
         </div>

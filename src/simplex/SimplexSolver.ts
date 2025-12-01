@@ -47,6 +47,35 @@ export class SimplexSolver {
   get constraints(): Fraction[][] {
     return this.table.slice(0, this.table.length);
   }
+  getCurrentPoint() {
+    const [rows, cols] = this.size;
+    const variablesCount = cols - 1;
+    const solution: Fraction[] = new Array(variablesCount)
+      .fill(null)
+      .map(() => new Fraction(0));
+
+    for (let i = 0; i < this.basis.length; i++) {
+      const varIndex = this.basis[i];
+      let rowWithOne = -1;
+      for (let r = 0; r < rows - 1; r++) {
+        if (this.table[r][varIndex].equals(1)) {
+          rowWithOne = r;
+          break;
+        }
+      }
+      if (rowWithOne !== -1) {
+        const beta = this.table[rowWithOne][cols - 1];
+        solution[varIndex] = beta;
+      }
+    }
+
+    const fnValue = this.table[rows - 1][cols - 1].neg();
+
+    return {
+      values: solution,
+      value: fnValue,
+    };
+  }
   simplexStep(): Fraction {
     console.table(this.toStringVert());
     const branch = this.chooseBranch();
@@ -196,7 +225,10 @@ export class SimplexSolver {
     const rows = matrix.length;
     const constantCol = cols;
     // function substitution
-    const substitutedFn: Fraction[] = new Array(cols + 1).fill(new Fraction(0));
+    const substitutedFn: Fraction[] = [];
+    for (let i = 0; i < cols + 1; i++) {
+      substitutedFn.push(new Fraction(0));
+    }
     // fill from original fn without substituted elements
     for (let i = 0; i < cols; i++) {
       if (!basis.includes(i)) {
@@ -267,7 +299,6 @@ export class SimplexSolver {
 }
 
 export class ExtendedSimplexSolver extends SimplexSolver {
-  // Добавляем метод для получения текущего состояния
   getCurrentState() {
     return {
       basis: this.basis,
@@ -276,10 +307,8 @@ export class ExtendedSimplexSolver extends SimplexSolver {
     };
   }
 
-  // Метод для принудительного установления базиса
   setBasis(newBasis: number[]): void {
     this.basis = newBasis;
-    // Пересчитываем таблицу для нового базиса
     const gaussSolved = gaussWithBasis(
       this.table
         .slice(0, -1)
@@ -292,7 +321,6 @@ export class ExtendedSimplexSolver extends SimplexSolver {
 
 export function needsArtificialBasis(lpTask: LPTask): boolean {
   const { constraints, basis } = lpTask;
-
   for (let i = 0; i < basis.length; i++) {
     const betaValue = constraints[i][constraints[i].length - 1];
     if (betaValue.lt(0)) {
@@ -303,7 +331,7 @@ export function needsArtificialBasis(lpTask: LPTask): boolean {
   try {
     new SimplexSolver(lpTask);
     return false;
-  } catch {
+  } catch (e) {
     return true;
   }
 }

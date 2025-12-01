@@ -11,7 +11,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-image: url("./assets/topbar_1.png");
+  background-image: url("./assets/background_2.webp");
   background-size: cover;
   min-width: 320px;
   min-height: 100vh;
