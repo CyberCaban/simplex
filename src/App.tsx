@@ -733,7 +733,7 @@ function App() {
         )}
 
         {steps.length > 0 && (
-          <div
+          <details
             style={{
               marginTop: "1rem",
               padding: "1rem",
@@ -741,7 +741,7 @@ function App() {
               borderRadius: "8px",
             }}
           >
-            <h3>Все шаги решения ({steps.length}):</h3>
+            <summary>Все шаги решения ({steps.length}):</summary>
             <div
               style={{ fontSize: "0.9rem", marginBottom: "1rem", opacity: 0.8 }}
             >
@@ -839,7 +839,7 @@ function App() {
                 </div>
               </details>
             ))}
-          </div>
+          </details>
         )}
       </div>
     </main>

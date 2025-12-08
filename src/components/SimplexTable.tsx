@@ -64,9 +64,11 @@ export function SimplexTable({
                 {nonBasisCols.map((col) => {
                   const isPivot =
                     selectedPivot?.row === rowIndex && selectedPivot?.col === col;
-                  const isClickable = possiblePivots.some(
-                    (p) => p.row === rowIndex && p.col === col
-                  );
+                  const isClickable =
+                    !isPivot &&
+                    possiblePivots.some(
+                      (p) => p.row === rowIndex && p.col === col
+                    );
                   return (
                     <td
                       key={col}
