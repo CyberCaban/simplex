@@ -96,6 +96,10 @@ export class SimplexSolver {
     }
     throw Error("Произошла непредвиденная ошибка при решении задачи");
   }
+  getSuccessValue(): Fraction {
+    const [rows, cols] = this.size
+    return this.table[rows-1][cols-1].neg()
+  }
   calculateStep() {
     const bestPivot = this.findBestPivot();
     if (bestPivot === null)
@@ -138,7 +142,7 @@ export class SimplexSolver {
     this.stepNumber++;
     this.table = newTable;
   }
-  findBestPivot(): PivotElement | null {
+  getPossiblePivots(): PivotElement[] {
     const fn = this.fn;
     const possiblePivots: PivotElement[] = [];
 
@@ -157,6 +161,11 @@ export class SimplexSolver {
         }
       }
     }
+    return possiblePivots
+  }
+  findBestPivot(): PivotElement | null {
+    const possiblePivots: PivotElement[] = this.getPossiblePivots()
+
     let bestPivot = possiblePivots[0];
     if (bestPivot == null)
       throw Error(

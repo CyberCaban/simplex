@@ -44,18 +44,20 @@ function App() {
         return next.slice(0, numVariables);
       }
       if (next.length < numVariables) {
-        return next.concat(Array(numVariables - next.length).fill("1"))
+        return next.concat(Array(numVariables - next.length).fill("1"));
       }
       return next;
-    })
+    });
     setConstraintsData((prev) => {
       let rows = [...prev];
       if (rows.length > numConstraints) {
         rows = rows.slice(0, numConstraints);
       } else if (rows.length < numConstraints) {
-        const addRows = Array.from({ length: numConstraints - rows.length }, () =>
-          Array(numVariables + 1).fill("1"));
-        rows = rows.concat(addRows)
+        const addRows = Array.from(
+          { length: numConstraints - rows.length },
+          () => Array(numVariables + 1).fill("1")
+        );
+        rows = rows.concat(addRows);
       }
       rows = rows.map((row) => {
         let r = row ? [...row] : [];
@@ -68,7 +70,7 @@ function App() {
       });
 
       return rows;
-    })
+    });
     setBasisSelection((prev) => {
       const next = [...prev];
       if (next.length > numVariables) {
@@ -120,14 +122,14 @@ function App() {
   const buildLPTask = (): LPTask => {
     const fn = fnCoeffs.map((c) => new Fraction(c));
     const constraints = constraintsData.map((row) =>
-      row.map((c) => new Fraction(c)),
+      row.map((c) => new Fraction(c))
     );
 
     let basis: number[];
     if (useArtificialBasis) {
       basis = Array.from(
         { length: numConstraints },
-        (_, i) => numVariables + i,
+        (_, i) => i
       );
     } else {
       basis = basisSelection
@@ -145,10 +147,11 @@ function App() {
       return;
     }
     const task = buildLPTask();
+    debugger
     if (isAutoMode) {
       solveAuto(task, useArtificialBasis);
     } else {
-      startStepMode(task);
+      startStepMode(task, useArtificialBasis);
     }
   };
 
@@ -191,7 +194,7 @@ function App() {
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target?.result as string);
-        setisLoadingFromFile(true)
+        setisLoadingFromFile(true);
         setNumVariables(data.numVariables);
         setNumConstraints(data.numConstraints);
         setIsMaximization(data.isMaximization);
@@ -200,7 +203,7 @@ function App() {
         setBasisSelection(data.basis);
         setUseArtificialBasis(data.useArtificialBasis || false);
         reset();
-        setisLoadingFromFile(false)
+        setisLoadingFromFile(false);
       } catch (e: any) {
         setError(`Ошибка загрузки: ${e.message}`);
       }
@@ -222,7 +225,7 @@ function App() {
       setIsMaximization(task.isMaximization);
       setFnCoeffs(task.fn.map((f) => f.toFraction()));
       setConstraintsData(
-        task.constraints.map((row) => row.map((c) => c.toFraction())),
+        task.constraints.map((row) => row.map((c) => c.toFraction()))
       );
 
       const newBasisSelection = Array(task.fn.length).fill(false);
@@ -254,7 +257,15 @@ function App() {
         <img src={TopBarImg} alt="" loading="lazy" />
       </div>
 
-      <div style={{ width: "90%", marginTop: "1rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div
+        style={{
+          width: "90%",
+          marginTop: "1rem",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
         <details style={{ marginBottom: "1rem" }}>
           <summary
             style={{
@@ -779,8 +790,8 @@ function App() {
                       ? "❌ " + (step.message?.split("\n")[0] || "Ошибка")
                       : "✅ Финальный результат"
                     : step.stepNumber === 0
-                      ? "🔵 Начальная таблица"
-                      : `📊 Шаг ${step.stepNumber}`}
+                    ? "🔵 Начальная таблица"
+                    : `📊 Шаг ${step.stepNumber}`}
                   {idx === currentStepIndex && " (текущий)"}
                 </summary>
                 <div style={{ marginTop: "0.5rem", paddingLeft: "1rem" }}>

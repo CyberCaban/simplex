@@ -63,7 +63,8 @@ export function SimplexTable({
                 </td>
                 {nonBasisCols.map((col) => {
                   const isPivot =
-                    selectedPivot?.row === rowIndex && selectedPivot?.col === col;
+                    selectedPivot?.row === rowIndex &&
+                    selectedPivot?.col === col;
                   const isClickable =
                     !isPivot &&
                     possiblePivots.some(
@@ -77,19 +78,24 @@ export function SimplexTable({
                         backgroundColor: isPivot
                           ? "rgba(200, 0, 0, 0.3)"
                           : isClickable
-                            ? "rgba(100, 150, 255, 0.2)"
-                            : undefined,
+                          ? "rgba(100, 150, 255, 0.2)"
+                          : undefined,
                         cursor: isClickable ? "pointer" : "default",
                       }}
                       onClick={() =>
-                        isClickable && !isComplete && onPivotClick?.(rowIndex, col)
+                        selectedPivot === undefined &&
+                        isClickable &&
+                        !isComplete &&
+                        onPivotClick?.(rowIndex, col)
                       }
                     >
                       {table[rowIndex][col].toFraction()}
                     </td>
                   );
                 })}
-                <td style={cellStyle}>{table[rowIndex][cols - 1].toFraction()}</td>
+                <td style={cellStyle}>
+                  {table[rowIndex][cols - 1].toFraction()}
+                </td>
               </tr>
             );
           })}
@@ -105,7 +111,13 @@ export function SimplexTable({
         </tbody>
       </table>
       {possiblePivots.length > 0 && !isComplete && isAutoMode && (
-        <div style={{ marginTop: "0.5rem", fontSize: "0.9rem", fontStyle: "italic" }}>
+        <div
+          style={{
+            marginTop: "0.5rem",
+            fontSize: "0.9rem",
+            fontStyle: "italic",
+          }}
+        >
           Кликните на подсвеченную ячейку для выбора опорного элемента
         </div>
       )}

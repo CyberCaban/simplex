@@ -11,7 +11,7 @@ export type StepData = {
   table: Fraction[][];
   possiblePivots: { row: number; col: number; ratio: Fraction }[];
   selectedPivot?: { row: number; col: number };
-  pendingPivot?: { row: number, col: number };
+  pendingPivot?: { row: number; col: number };
   isComplete: boolean;
   value?: Fraction;
   message?: string;
@@ -45,8 +45,8 @@ export function useSimplexSolver() {
 
   const solveAuto = (task: LPTask, useArtificialBasis: boolean) => {
     setError("");
+    const allSteps: StepData[] = [];
     try {
-      const allSteps: StepData[] = [];
 
       if (useArtificialBasis || needsArtificialBasis(task)) {
         console.log("useArtificialBasis", needsArtificialBasis(task));
@@ -54,9 +54,11 @@ export function useSimplexSolver() {
           const solver = new ArtificialBasisSolver(task);
           const result = solver.solve();
 
+          solver.getSteps().map(step => allSteps.push(step))
+
           if (result.hasSolution) {
             allSteps.push({
-              stepNumber: 0,
+              stepNumber: allSteps.length,
               basis: [],
               table: [],
               possiblePivots: [],
@@ -65,12 +67,12 @@ export function useSimplexSolver() {
               message: `Решение найдено методом искусственного базиса\n${result.solution
                 .map((v, i) => `x${i + 1} = ${v.toFraction()}`)
                 .join(
-                  ", ",
+                  ", "
                 )}\nЗначение целевой функции: ${result.value.toFraction()}`,
             });
           } else {
             allSteps.push({
-              stepNumber: 0,
+              stepNumber: allSteps.length,
               basis: [],
               table: [],
               possiblePivots: [],
@@ -81,7 +83,7 @@ export function useSimplexSolver() {
           }
         } catch (e: any) {
           allSteps.push({
-            stepNumber: 0,
+            stepNumber: allSteps.length,
             basis: [],
             table: [],
             possiblePivots: [],
@@ -111,7 +113,7 @@ export function useSimplexSolver() {
 
             const negativeVars = xs
               .map((value, index) => ({ index, value }))
-              .filter(item => item.value.lt(0))
+              .filter((item) => item.value.lt(0));
 
             if (negativeVars.length > 0) {
               allSteps.push({
@@ -121,10 +123,13 @@ export function useSimplexSolver() {
                 possiblePivots: [],
                 isComplete: true,
                 value: f,
-                message: `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
-                  `${negativeVars.map(v => `x${v.index + 1} = ${v.value.toFraction()} < 0`).join('\n')}\n` +
+                message:
+                  `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
+                  `${negativeVars
+                    .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
+                    .join("\n")}\n` +
                   `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
-              })
+              });
             } else {
               allSteps.push({
                 stepNumber: stepNum,
@@ -133,7 +138,9 @@ export function useSimplexSolver() {
                 possiblePivots: [],
                 isComplete: true,
                 value: f,
-                message: `Оптимальное решение найдено!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(", ")})`,
+                message: `Оптимальное решение найдено!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(
+                  ", "
+                )})`,
               });
             }
             break;
@@ -173,7 +180,9 @@ export function useSimplexSolver() {
               possiblePivots: [pivot],
               selectedPivot: { row: pivot.row, col: pivot.col },
               isComplete: false,
-              message: `Шаг ${stepNum}: опорный элемент в строке ${pivot.row + 1}, столбце x${pivot.col + 1}`,
+              message: `Шаг ${stepNum}: опорный элемент в строке ${
+                pivot.row + 1
+              }, столбце x${pivot.col + 1}`,
             });
           }
         }
@@ -183,14 +192,19 @@ export function useSimplexSolver() {
       setCurrentStepIndex(0);
       return true;
     } catch (e: any) {
+      setSteps(allSteps);
+      setCurrentStepIndex(0);
       setError(`Ошибка при решении: ${e.message}`);
       return false;
     }
   };
 
-  const startStepMode = (task: LPTask) => {
+  const startStepMode = (task: LPTask, useArtificialBasis: boolean) => {
     setError("");
     try {
+      if (useArtificialBasis) {
+        task.basis = new ArtificialBasisSolver({...task}).getArtificialBasis();
+      }
       const solver = new SimplexSolver(task);
       const initialState = solver.getCurrentState();
       const branch = solver.chooseBranch();
@@ -200,20 +214,25 @@ export function useSimplexSolver() {
 
         const negativeVars = xs
           .map((value, index) => ({ index, value }))
-          .filter(item => item.value.lt(0))
+          .filter((item) => item.value.lt(0));
 
         if (negativeVars.length > 0) {
-          setSteps([{
-            stepNumber: 0,
-            basis: [],
-            table: [],
-            possiblePivots: [],
-            isComplete: true,
-            value: f,
-            message: `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
-              `${negativeVars.map(v => `x${v.index + 1} = ${v.value.toFraction()} < 0`).join('\n')}\n` +
-              `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
-          }])
+          setSteps([
+            {
+              stepNumber: 0,
+              basis: [],
+              table: [],
+              possiblePivots: [],
+              isComplete: true,
+              value: f,
+              message:
+                `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
+                `${negativeVars
+                  .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
+                  .join("\n")}\n` +
+                `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
+            },
+          ]);
         } else {
           setSteps([
             {
@@ -223,7 +242,9 @@ export function useSimplexSolver() {
               possiblePivots: [],
               isComplete: true,
               value: f,
-              message: `Базис уже оптимален!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(", ")})`,
+              message: `Базис уже оптимален!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(
+                ", "
+              )})`,
             },
           ]);
         }
@@ -232,21 +253,50 @@ export function useSimplexSolver() {
       }
 
       if (branch === "No limit") {
-        throw Error("Целевая функция не ограничена снизу: задача не имеет оптимального решения")
+        throw Error(
+          "Целевая функция не ограничена снизу: задача не имеет оптимального решения"
+        );
       }
+
+      const { values: xs, value: f } = solver.getCurrentPoint();
+
+      const negativeVars = xs
+        .map((value, index) => ({ index, value }))
+        .filter((item) => item.value.lt(0));
       const possiblePivots = findAllPossiblePivots(solver);
-      setSteps([
-        {
-          stepNumber: 0,
-          basis: [...initialState.basis],
-          table: initialState.table.map((row: Fraction[]) => [...row]),
-          possiblePivots,
-          isComplete: false,
-          message: "Начальная симплекс-таблица. Выберите опорный элемент.",
-        },
-      ]);
-      setCurrentStepIndex(0);
-      return true;
+      if (negativeVars.length > 0) {
+        setSteps([
+          {
+            stepNumber: 0,
+            basis: [],
+            table: [],
+            possiblePivots: [],
+            isComplete: true,
+            value: f,
+            message:
+              `Ошибка на шаге 0: Получено решение с отрицательными значениями переменных!\n` +
+              `${negativeVars
+                .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
+                .join("\n")}\n` +
+              `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
+          },
+        ]);
+        setCurrentStepIndex(0);
+        return true;
+      } else {
+        setSteps([
+          {
+            stepNumber: 0,
+            basis: [...initialState.basis],
+            table: initialState.table.map((row: Fraction[]) => [...row]),
+            possiblePivots,
+            isComplete: false,
+            message: "Начальная симплекс-таблица. Выберите опорный элемент.",
+          },
+        ]);
+        setCurrentStepIndex(0);
+        return true;
+      }
     } catch (e: any) {
       setError(`Ошибка: ${e.message}`);
       return false;
@@ -256,7 +306,7 @@ export function useSimplexSolver() {
   const executeStepWithPivot = (
     task: LPTask,
     pivotRow: number,
-    pivotCol: number,
+    pivotCol: number
   ) => {
     try {
       const solver = new SimplexSolver(task);
@@ -270,7 +320,7 @@ export function useSimplexSolver() {
             .map(() =>
               Array(cols)
                 .fill(null)
-                .map(() => new Fraction(0)),
+                .map(() => new Fraction(0))
             );
 
           const pRow = step.selectedPivot.row;
@@ -286,7 +336,7 @@ export function useSimplexSolver() {
             if (k === pRow) continue;
             for (let j = 0; j < cols; j++) {
               newTable[k][j] = solver.table[k][j].sub(
-                solver.table[k][pCol].mul(newTable[pRow][j]),
+                solver.table[k][pCol].mul(newTable[pRow][j])
               );
             }
           }
@@ -305,7 +355,7 @@ export function useSimplexSolver() {
         .map(() =>
           Array(cols)
             .fill(null)
-            .map(() => new Fraction(0)),
+            .map(() => new Fraction(0))
         );
 
       const pivot = solver.table[pivotRow][pivotCol];
@@ -318,7 +368,7 @@ export function useSimplexSolver() {
         if (i === pivotRow) continue;
         for (let j = 0; j < cols; j++) {
           newTable[i][j] = solver.table[i][j].sub(
-            solver.table[i][pivotCol].mul(newTable[pivotRow][j]),
+            solver.table[i][pivotCol].mul(newTable[pivotRow][j])
           );
         }
       }
@@ -335,21 +385,24 @@ export function useSimplexSolver() {
 
         const negativeVars = xs
           .map((value, index) => ({ index, value }))
-          .filter(item => item.value.lt(0))
+          .filter((item) => item.value.lt(0));
 
         let newStep;
         if (negativeVars.length > 0) {
-          newStep = ({
+          newStep = {
             stepNumber: currentStepIndex + 1,
             basis: [...currentState.basis],
             table: currentState.table.map((row: Fraction[]) => [...row]),
             possiblePivots: [],
             isComplete: true,
             value: f,
-            message: `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
-              `${negativeVars.map(v => `x${v.index + 1} = ${v.value.toFraction()} < 0`).join('\n')}\n` +
+            message:
+              `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
+              `${negativeVars
+                .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
+                .join("\n")}\n` +
               `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
-          })
+          };
         } else {
           newStep = {
             stepNumber: currentStepIndex + 1,
@@ -358,8 +411,10 @@ export function useSimplexSolver() {
             possiblePivots: [],
             isComplete: true,
             value: f,
-            message: `Оптимальное решение найдено!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(", ")})`,
-          }
+            message: `Оптимальное решение найдено!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(
+              ", "
+            )})`,
+          };
         }
         const newSteps = [
           ...steps.slice(0, currentStepIndex + 1),
