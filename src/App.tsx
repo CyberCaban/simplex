@@ -21,6 +21,8 @@ function App() {
 
   const [isLoadingFromFile, setisLoadingFromFile] = useState(false);
 
+  const [filename, setFilename] = useState("simplex-task");
+
   const {
     steps,
     currentStepIndex,
@@ -127,10 +129,7 @@ function App() {
 
     let basis: number[];
     if (useArtificialBasis) {
-      basis = Array.from(
-        { length: numConstraints },
-        (_, i) => i
-      );
+      basis = Array.from({ length: numConstraints }, (_, i) => i);
     } else {
       basis = basisSelection
         .map((selected, idx) => (selected ? idx : -1))
@@ -147,7 +146,7 @@ function App() {
       return;
     }
     const task = buildLPTask();
-    debugger
+    debugger;
     if (isAutoMode) {
       solveAuto(task, useArtificialBasis);
     } else {
@@ -178,7 +177,7 @@ function App() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "simplex_task.json";
+      a.download = `${filename}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e: any) {
@@ -563,6 +562,42 @@ function App() {
           >
             Примеры из учебных задач с разными типами решений
           </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              gap: "1rem"
+            }}
+          >
+            <button onClick={saveToFile}>Сохранить в файл</button>
+            <input
+              onChange={(e) => setFilename(e.target.value)}
+              value={filename}
+            />
+            <label
+              style={{
+                cursor: "pointer",
+                padding: "0.3em 0.4em",
+                backgroundColor: "#0f0f0f98",
+                borderRadius: "8px",
+                border: "1px solid transparent",
+              }}
+            >
+              Загрузить из файла
+              <input
+                type="file"
+                accept=".json"
+                style={{ display: "none" }}
+                onChange={loadFromFile}
+              />
+            </label>
+          </div>
+          <div
+            style={{ fontSize: "0.85rem", marginTop: "0.5rem", opacity: 0.7 }}
+          >
+            Сохранение и загрузка задач
+          </div>
         </div>
 
         <div
@@ -593,24 +628,6 @@ function App() {
           >
             Пошаговый режим
           </button>
-          <button onClick={saveToFile}>Сохранить в файл</button>
-          <label
-            style={{
-              cursor: "pointer",
-              padding: "0.3em 0.4em",
-              backgroundColor: "#0f0f0f98",
-              borderRadius: "8px",
-              border: "1px solid transparent",
-            }}
-          >
-            Загрузить из файла
-            <input
-              type="file"
-              accept=".json"
-              style={{ display: "none" }}
-              onChange={loadFromFile}
-            />
-          </label>
         </div>
 
         {error && (
