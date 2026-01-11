@@ -145,8 +145,8 @@ function App() {
       setError(validationError);
       return;
     }
-    const task = buildLPTask();
     debugger;
+    const task = buildLPTask();
     if (isAutoMode) {
       solveAuto(task, useArtificialBasis);
     } else {

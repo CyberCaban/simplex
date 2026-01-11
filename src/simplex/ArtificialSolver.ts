@@ -71,7 +71,6 @@ export class ArtificialBasisSolver {
       message: "Начальная симплекс-таблица",
     });
     try {
-      
       while (true) {
         const branch = phase1Solver.chooseBranch()
         const currentState = phase1Solver.getCurrentState()

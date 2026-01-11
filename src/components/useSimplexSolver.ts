@@ -47,14 +47,13 @@ export function useSimplexSolver() {
     setError("");
     const allSteps: StepData[] = [];
     try {
-
       if (useArtificialBasis || needsArtificialBasis(task)) {
         console.log("useArtificialBasis", needsArtificialBasis(task));
         try {
           const solver = new ArtificialBasisSolver(task);
           const result = solver.solve();
 
-          solver.getSteps().map(step => allSteps.push(step))
+          solver.getSteps().map((step) => allSteps.push(step));
 
           if (result.hasSolution) {
             allSteps.push({
@@ -95,97 +94,124 @@ export function useSimplexSolver() {
         const solver = new SimplexSolver(task);
         let stepNum = 0;
 
-        const initialState = solver.getCurrentState();
-        allSteps.push({
-          stepNumber: 0,
-          basis: [...initialState.basis],
-          table: initialState.table.map((row: Fraction[]) => [...row]),
-          possiblePivots: [],
-          isComplete: false,
-          message: "Начальная симплекс-таблица",
-        });
+        const currentState = solver.getCurrentState();
+        const { values: xs, value: f } = solver.getCurrentPoint();
+        const negativeVars = xs
+          .map((value, index) => ({ index, value }))
+          .filter((item) => item.value.lt(0));
+        let isSolvable = true;
+        if (negativeVars.length > 0) {
+          allSteps.push({
+            stepNumber: stepNum,
+            basis: [...currentState.basis],
+            table: currentState.table.map((row: Fraction[]) => [...row]),
+            possiblePivots: [],
+            isComplete: true,
+            value: f,
+            message:
+              `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
+              `${negativeVars
+                .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
+                .join("\n")}\n` +
+              `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
+          });
+          isSolvable = false;
+        } else {
+          const initialState = solver.getCurrentState();
+          allSteps.push({
+            stepNumber: 0,
+            basis: [...initialState.basis],
+            table: initialState.table.map((row: Fraction[]) => [...row]),
+            possiblePivots: [],
+            isComplete: false,
+            message: "Начальная симплекс-таблица",
+          });
+        }
 
-        while (true) {
-          const branch = solver.chooseBranch();
-          const currentState = solver.getCurrentState();
-          if (branch === "Success") {
-            const { values: xs, value: f } = solver.getCurrentPoint();
+        if (isSolvable)
+          while (true) {
+            const branch = solver.chooseBranch();
+            const currentState = solver.getCurrentState();
+            if (branch === "Success") {
+              const { values: xs, value: f } = solver.getCurrentPoint();
 
-            const negativeVars = xs
-              .map((value, index) => ({ index, value }))
-              .filter((item) => item.value.lt(0));
+              const negativeVars = xs
+                .map((value, index) => ({ index, value }))
+                .filter((item) => item.value.lt(0));
 
-            if (negativeVars.length > 0) {
+              if (negativeVars.length > 0) {
+                allSteps.push({
+                  stepNumber: stepNum,
+                  basis: [...currentState.basis],
+                  table: currentState.table.map((row: Fraction[]) => [...row]),
+                  possiblePivots: [],
+                  isComplete: true,
+                  value: f,
+                  message:
+                    `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
+                    `${negativeVars
+                      .map(
+                        (v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`
+                      )
+                      .join("\n")}\n` +
+                    `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
+                });
+              } else {
+                allSteps.push({
+                  stepNumber: stepNum,
+                  basis: [...currentState.basis],
+                  table: currentState.table.map((row: Fraction[]) => [...row]),
+                  possiblePivots: [],
+                  isComplete: true,
+                  value: f,
+                  message: `Оптимальное решение найдено!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(
+                    ", "
+                  )})`,
+                });
+              }
+              break;
+            } else if (branch === "No limit") {
               allSteps.push({
                 stepNumber: stepNum,
                 basis: [...currentState.basis],
                 table: currentState.table.map((row: Fraction[]) => [...row]),
                 possiblePivots: [],
                 isComplete: true,
-                value: f,
                 message:
-                  `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
-                  `${negativeVars
-                    .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
-                    .join("\n")}\n` +
-                  `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
-              });
-            } else {
-              allSteps.push({
-                stepNumber: stepNum,
-                basis: [...currentState.basis],
-                table: currentState.table.map((row: Fraction[]) => [...row]),
-                possiblePivots: [],
-                isComplete: true,
-                value: f,
-                message: `Оптимальное решение найдено!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(
-                  ", "
-                )})`,
-              });
-            }
-            break;
-          } else if (branch === "No limit") {
-            allSteps.push({
-              stepNumber: stepNum,
-              basis: [...currentState.basis],
-              table: currentState.table.map((row: Fraction[]) => [...row]),
-              possiblePivots: [],
-              isComplete: true,
-              message:
-                "Целевая функция не ограничена снизу: задача не имеет оптимального решения",
-            });
-            break;
-          } else {
-            const pivot = solver.findBestPivot();
-            if (!pivot) {
-              allSteps.push({
-                stepNumber: stepNum,
-                basis: [...currentState.basis],
-                table: currentState.table.map((row: Fraction[]) => [...row]),
-                possiblePivots: [],
-                isComplete: true,
-                message: "Ошибка: не найден опорный элемент",
+                  "Целевая функция не ограничена снизу: задача не имеет оптимального решения",
               });
               break;
+            } else {
+              const pivot = solver.findBestPivot();
+              if (!pivot) {
+                allSteps.push({
+                  stepNumber: stepNum,
+                  basis: [...currentState.basis],
+                  table: currentState.table.map((row: Fraction[]) => [...row]),
+                  possiblePivots: [],
+                  isComplete: true,
+                  message: "Ошибка: не найден опорный элемент",
+                });
+                break;
+              }
+
+              stepNum++;
+              solver.calculateStep();
+
+              const newState = solver.getCurrentState();
+              allSteps.push({
+                stepNumber: stepNum,
+                basis: [...newState.basis],
+                table: newState.table.map((row: Fraction[]) => [...row]),
+                possiblePivots: [pivot],
+                selectedPivot: { row: pivot.row, col: pivot.col },
+                isComplete: false,
+                message: `Шаг ${stepNum}: опорный элемент в строке ${
+                  pivot.row + 1
+                }, столбце x${pivot.col + 1}`,
+              });
             }
-
-            stepNum++;
-            solver.calculateStep();
-
-            const newState = solver.getCurrentState();
-            allSteps.push({
-              stepNumber: stepNum,
-              basis: [...newState.basis],
-              table: newState.table.map((row: Fraction[]) => [...row]),
-              possiblePivots: [pivot],
-              selectedPivot: { row: pivot.row, col: pivot.col },
-              isComplete: false,
-              message: `Шаг ${stepNum}: опорный элемент в строке ${
-                pivot.row + 1
-              }, столбце x${pivot.col + 1}`,
-            });
           }
-        }
       }
 
       setSteps(allSteps);
@@ -203,7 +229,9 @@ export function useSimplexSolver() {
     setError("");
     try {
       if (useArtificialBasis) {
-        task.basis = new ArtificialBasisSolver({...task}).getArtificialBasis();
+        task.basis = new ArtificialBasisSolver({
+          ...task,
+        }).getArtificialBasis();
       }
       const solver = new SimplexSolver(task);
       const initialState = solver.getCurrentState();
@@ -211,6 +239,7 @@ export function useSimplexSolver() {
 
       if (branch === "Success") {
         const { values: xs, value: f } = solver.getCurrentPoint();
+        const state = solver.getCurrentState();
 
         const negativeVars = xs
           .map((value, index) => ({ index, value }))
@@ -220,8 +249,8 @@ export function useSimplexSolver() {
           setSteps([
             {
               stepNumber: 0,
-              basis: [],
-              table: [],
+              basis: [...state.basis],
+              table: state.table.map((row) => [...row]),
               possiblePivots: [],
               isComplete: true,
               value: f,
@@ -264,12 +293,13 @@ export function useSimplexSolver() {
         .map((value, index) => ({ index, value }))
         .filter((item) => item.value.lt(0));
       const possiblePivots = findAllPossiblePivots(solver);
+      const state = solver.getCurrentState();
       if (negativeVars.length > 0) {
         setSteps([
           {
             stepNumber: 0,
-            basis: [],
-            table: [],
+            basis: [...state.basis],
+            table: state.table.map((row) => [...row]),
             possiblePivots: [],
             isComplete: true,
             value: f,
@@ -391,8 +421,8 @@ export function useSimplexSolver() {
         if (negativeVars.length > 0) {
           newStep = {
             stepNumber: currentStepIndex + 1,
-            basis: [...currentState.basis],
-            table: currentState.table.map((row: Fraction[]) => [...row]),
+            basis: [...newState.basis],
+            table: newState.table.map((row: Fraction[]) => [...row]),
             possiblePivots: [],
             isComplete: true,
             value: f,
