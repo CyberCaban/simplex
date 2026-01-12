@@ -98,7 +98,7 @@ export class SimplexSolver {
   }
   getSuccessValue(): Fraction {
     const [rows, cols] = this.size
-    return this.table[rows-1][cols-1].neg()
+    return this.table[rows - 1][cols - 1].neg()
   }
   calculateStep() {
     const bestPivot = this.findBestPivot();

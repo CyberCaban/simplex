@@ -75,82 +75,81 @@ export class ArtificialBasisSolver {
         const branch = phase1Solver.chooseBranch()
         const currentState = phase1Solver.getCurrentState()
         if (branch === "Success") {
-            const { values: xs, value: f } = phase1Solver.getCurrentPoint();
+          const { values: xs, value: f } = phase1Solver.getCurrentPoint();
 
-            const negativeVars = xs
-              .map((value, index) => ({ index, value }))
-              .filter((item) => item.value.lt(0));
+          const negativeVars = xs
+            .map((value, index) => ({ index, value }))
+            .filter((item) => item.value.lt(0));
 
-            if (negativeVars.length > 0) {
-              this.steps.push({
-                stepNumber: this.steps.length,
-                basis: [...currentState.basis],
-                table: currentState.table.map((row: Fraction[]) => [...row]),
-                possiblePivots: [],
-                isComplete: true,
-                value: f,
-                message:
-                  `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
-                  `${negativeVars
-                    .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
-                    .join("\n")}\n` +
-                  `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
-              });
-            } else {
-              this.steps.push({
-                stepNumber: this.steps.length,
-                basis: [...currentState.basis],
-                table: currentState.table.map((row: Fraction[]) => [...row]),
-                possiblePivots: [],
-                isComplete: true,
-                value: f,
-                message: `Оптимальное решение найдено!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(
-                  ", "
-                )})`,
-              });
-            }
-            break
-        } else if (branch === "No limit") {
-
+          if (negativeVars.length > 0) {
             this.steps.push({
               stepNumber: this.steps.length,
               basis: [...currentState.basis],
               table: currentState.table.map((row: Fraction[]) => [...row]),
               possiblePivots: [],
               isComplete: true,
+              value: f,
               message:
-                "Целевая функция не ограничена снизу: задача не имеет оптимального решения",
+                `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
+                `${negativeVars
+                  .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
+                  .join("\n")}\n` +
+                `Задача в канонической форме требует x_i >= 0. Проверьте правильность ввода ограничений.`,
             });
-            break;
           } else {
-            const pivot = phase1Solver.findBestPivot();
-            if (!pivot) {
-              this.steps.push({
-                stepNumber: this.steps.length,
-                basis: [...currentState.basis],
-                table: currentState.table.map((row: Fraction[]) => [...row]),
-                possiblePivots: [],
-                isComplete: true,
-                message: "Ошибка: не найден опорный элемент",
-              });
-              break;
-            }
-
-            phase1Solver.calculateStep();
-
-            const newState = phase1Solver.getCurrentState();
             this.steps.push({
               stepNumber: this.steps.length,
-              basis: [...newState.basis],
-              table: newState.table.map((row: Fraction[]) => [...row]),
-              possiblePivots: [pivot],
-              selectedPivot: { row: pivot.row, col: pivot.col },
-              isComplete: false,
-              message: `Шаг ${this.steps.length}: опорный элемент в строке ${
-                pivot.row + 1
-              }, столбце x${pivot.col + 1}`,
+              basis: [...currentState.basis],
+              table: currentState.table.map((row: Fraction[]) => [...row]),
+              possiblePivots: [],
+              isComplete: true,
+              value: f,
+              message: `Оптимальное решение найдено!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(
+                ", "
+              )})`,
             });
           }
+          break
+        } else if (branch === "No limit") {
+
+          this.steps.push({
+            stepNumber: this.steps.length,
+            basis: [...currentState.basis],
+            table: currentState.table.map((row: Fraction[]) => [...row]),
+            possiblePivots: [],
+            isComplete: true,
+            message:
+              "Целевая функция не ограничена снизу: задача не имеет оптимального решения",
+          });
+          break;
+        } else {
+          const pivot = phase1Solver.findBestPivot();
+          if (!pivot) {
+            this.steps.push({
+              stepNumber: this.steps.length,
+              basis: [...currentState.basis],
+              table: currentState.table.map((row: Fraction[]) => [...row]),
+              possiblePivots: [],
+              isComplete: true,
+              message: "Ошибка: не найден опорный элемент",
+            });
+            break;
+          }
+
+          phase1Solver.calculateStep();
+
+          const newState = phase1Solver.getCurrentState();
+          this.steps.push({
+            stepNumber: this.steps.length,
+            basis: [...newState.basis],
+            table: newState.table.map((row: Fraction[]) => [...row]),
+            possiblePivots: [pivot],
+            selectedPivot: { row: pivot.row, col: pivot.col },
+            isComplete: false,
+            message: `Шаг ${this.steps.length}: опорный элемент в строке ${pivot.row + 1
+              }, столбце x${pivot.col + 1}`,
+          });
+        }
       }
 
       const artificialValue = phase1Solver.getSuccessValue()
@@ -165,10 +164,10 @@ export class ArtificialBasisSolver {
           ],
           isComplete: true,
           message:
-            `Система ограничений несовместна: сумма искусственных переменных = ${artificialValue.toFraction()} ≠ 0. Задача не имеет допустимых решений.`,
+            `Система ограничений несовместна: сумма искусственных переменных = ${artificialValue.toFraction()} != 0. Задача не имеет допустимых решений.`,
         });
         throw Error(
-          `Система ограничений несовместна: сумма искусственных переменных = ${artificialValue.toFraction()} ≠ 0. Задача не имеет допустимых решений.`
+          `Система ограничений несовместна: сумма искусственных переменных = ${artificialValue.toFraction()} != 0. Задача не имеет допустимых решений.`
         );
       }
       this.hasSolution = true;
@@ -265,11 +264,11 @@ export class ArtificialBasisSolver {
       throw Error(
         `Ошибка на второй фазе метода искусственного базиса: ${error.message}`
       );
-      return {
-        solution: this.solution,
-        value: new Fraction(),
-        hasSolution: false,
-      };
+      // return {
+      //   solution: this.solution,
+      //   value: new Fraction(),
+      //   hasSolution: false,
+      // };
     }
   }
 
@@ -312,7 +311,7 @@ export class ArtificialBasisSolver {
       if (artificialValue.abs().valueOf() > 1e-10) {
         this.hasSolution = false;
         throw Error(
-          `Система ограничений несовместна: сумма искусственных переменных = ${artificialValue.toFraction()} ≠ 0. Задача не имеет допустимых решений.`
+          `Система ограничений несовместна: сумма искусственных переменных = ${artificialValue.toFraction()} != 0. Задача не имеет допустимых решений.`
         );
       }
       this.hasSolution = true;

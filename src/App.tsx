@@ -83,15 +83,6 @@ function App() {
       }
       return next;
     });
-    // const newFn = Array(numVariables).fill("1");
-    // const newConstraints = Array(numConstraints)
-    //   .fill(null)
-    //   .map(() => Array(numVariables + 1).fill("1"));
-    // const newBasis = Array(numVariables).fill(false);
-
-    // setFnCoeffs(newFn);
-    // setConstraintsData(newConstraints);
-    // setBasisSelection(newBasis);
     reset();
   }, [numVariables, numConstraints, isAutoMode]);
 
@@ -273,7 +264,7 @@ function App() {
               fontWeight: "bold",
             }}
           >
-            📖 Справка
+            Справка
           </summary>
           <div
             style={{
@@ -777,7 +768,7 @@ function App() {
                 ? "Решение в автоматическом режиме. Используйте кнопки навигации выше для просмотра шагов или раскройте детали ниже."
                 : "Решение в пошаговом режиме. Используйте кнопки навигации выше для перехода между шагами."}
               <br />
-              💡{" "}
+              {" "}
               <i>
                 Совет: Кликните "Перейти к этому шагу" чтобы просмотреть таблицу
                 выше
@@ -804,11 +795,11 @@ function App() {
                     ? step.message?.includes("не имеет") ||
                       step.message?.includes("не ограничена") ||
                       step.message?.includes("Ошибка")
-                      ? "❌ " + (step.message?.split("\n")[0] || "Ошибка")
-                      : "✅ Финальный результат"
+                      ? (step.message?.split("\n")[0] || "Ошибка")
+                      : "Финальный результат"
                     : step.stepNumber === 0
-                    ? "🔵 Начальная таблица"
-                    : `📊 Шаг ${step.stepNumber}`}
+                      ? "Начальная таблица"
+                      : `Шаг ${step.stepNumber}`}
                   {idx === currentStepIndex && " (текущий)"}
                 </summary>
                 <div style={{ marginTop: "0.5rem", paddingLeft: "1rem" }}>

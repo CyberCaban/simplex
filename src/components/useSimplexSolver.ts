@@ -113,7 +113,7 @@ export function useSimplexSolver() {
               `${negativeVars
                 .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
                 .join("\n")}\n` +
-              `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
+              `Задача в канонической форме требует x_i >= 0. Проверьте правильность ввода ограничений.`,
           });
           isSolvable = false;
         } else {
@@ -154,7 +154,7 @@ export function useSimplexSolver() {
                         (v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`
                       )
                       .join("\n")}\n` +
-                    `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
+                    `Задача в канонической форме требует x_i >= 0. Проверьте правильность ввода ограничений.`,
                 });
               } else {
                 allSteps.push({
@@ -206,9 +206,8 @@ export function useSimplexSolver() {
                 possiblePivots: [pivot],
                 selectedPivot: { row: pivot.row, col: pivot.col },
                 isComplete: false,
-                message: `Шаг ${stepNum}: опорный элемент в строке ${
-                  pivot.row + 1
-                }, столбце x${pivot.col + 1}`,
+                message: `Шаг ${stepNum}: опорный элемент в строке ${pivot.row + 1
+                  }, столбце x${pivot.col + 1}`,
               });
             }
           }
@@ -259,7 +258,7 @@ export function useSimplexSolver() {
                 `${negativeVars
                   .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
                   .join("\n")}\n` +
-                `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
+                `Задача в канонической форме требует x_i >= 0. Проверьте правильность ввода ограничений.`,
             },
           ]);
         } else {
@@ -308,7 +307,7 @@ export function useSimplexSolver() {
               `${negativeVars
                 .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
                 .join("\n")}\n` +
-              `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
+              `Задача в канонической форме требует x_i >= 0. Проверьте правильность ввода ограничений.`,
           },
         ]);
         setCurrentStepIndex(0);
@@ -431,7 +430,7 @@ export function useSimplexSolver() {
               `${negativeVars
                 .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
                 .join("\n")}\n` +
-              `Задача в канонической форме требует x_i ≥ 0. Проверьте правильность ввода ограничений.`,
+              `Задача в канонической форме требует x_i >= 0. Проверьте правильность ввода ограничений.`,
           };
         } else {
           newStep = {
