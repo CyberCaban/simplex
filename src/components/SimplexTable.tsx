@@ -7,7 +7,7 @@ type SimplexTableProps = {
   selectedPivot?: { row: number; col: number };
   isComplete: boolean;
   isAutoMode: boolean;
-  onPivotClick?: (row: number, col: number) => void;
+  onPivotClick?: (row: number, col: number, basis: number[]) => void;
 };
 
 export function SimplexTable({
@@ -78,15 +78,15 @@ export function SimplexTable({
                         backgroundColor: isPivot
                           ? "rgba(200, 0, 0, 0.3)"
                           : isClickable
-                          ? "rgba(100, 150, 255, 0.2)"
-                          : undefined,
+                            ? "rgba(100, 150, 255, 0.2)"
+                            : undefined,
                         cursor: isClickable ? "pointer" : "default",
                       }}
                       onClick={() =>
                         selectedPivot === undefined &&
                         isClickable &&
                         !isComplete &&
-                        onPivotClick?.(rowIndex, col)
+                        onPivotClick?.(rowIndex, col, basis)
                       }
                     >
                       {table[rowIndex][col].toFraction()}

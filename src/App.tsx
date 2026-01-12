@@ -130,6 +130,18 @@ function App() {
     return { fn, constraints, basis, isMaximization };
   };
 
+  const buildFromPivot = (row: number, col: number, basis: number[]): LPTask => {
+    const fn = fnCoeffs.map((c) => new Fraction(c));
+    const constraints = constraintsData.map((row) =>
+      row.map((c) => new Fraction(c))
+    );
+
+    let newBasis = basis.slice();
+    newBasis[row] = col
+
+    return { fn, constraints, basis: newBasis, isMaximization };
+  };
+
   const handleSolve = () => {
     const validationError = validateInput();
     if (validationError) {
@@ -145,8 +157,8 @@ function App() {
     }
   };
 
-  const handlePivotClick = (row: number, col: number) => {
-    const task = buildLPTask();
+  const handlePivotClick = (row: number, col: number, basis: number[]) => {
+    const task = buildFromPivot(row, col, basis);
     executeStepWithPivot(task, row, col);
   };
 
@@ -718,7 +730,7 @@ function App() {
                 possiblePivots={currentStep.possiblePivots}
                 selectedPivot={currentStep.selectedPivot}
                 isComplete={currentStep.isComplete}
-                onPivotClick={handlePivotClick}
+                onPivotClick={(row, col, basis) => handlePivotClick(row, col, basis)}
               />
             )}
 

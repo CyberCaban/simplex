@@ -220,35 +220,112 @@ export class ArtificialBasisSolver {
     };
 
     const phase2Solver = new SimplexSolver(phase2Task);
+    this.steps.push({
+      stepNumber: this.steps.length,
+      basis: [...phase2Task.basis],
+      table: [...phase2Solver.getCurrentState().table],
+      isComplete: false,
+      possiblePivots: [
+        // ...phase2Solver.getPossiblePivots()
+      ],
+    });
     try {
-      this.steps.push({
-        stepNumber: this.steps.length,
-        basis: [...phase2Task.basis],
-        table: [...phase2Solver.getCurrentState().table],
-        isComplete: false,
-        possiblePivots: [
-          // ...phase2Solver.getPossiblePivots()
-        ],
-      });
-      const optimalValue = phase2Solver.simplexStep();
-      this.steps.push({
-        stepNumber: this.steps.length,
-        basis: [...phase2Task.basis],
-        table: [...phase2Solver.getCurrentState().table],
-        isComplete: false,
-        possiblePivots: [
-          // ...phase2Solver.getPossiblePivots()
-        ],
-      });
+      while (true) {
+        const branch = phase2Solver.chooseBranch()
+        const currentState = phase2Solver.getCurrentState()
+        if (branch === "Success") {
+          const { values: xs, value: f } = phase2Solver.getCurrentPoint();
+
+          const negativeVars = xs
+            .map((value, index) => ({ index, value }))
+            .filter((item) => item.value.lt(0));
+
+          if (negativeVars.length > 0) {
+            this.steps.push({
+              stepNumber: this.steps.length,
+              basis: [...currentState.basis],
+              table: currentState.table.map((row: Fraction[]) => [...row]),
+              possiblePivots: [],
+              isComplete: true,
+              value: f,
+              message:
+                `Ошибка: Получено решение с отрицательными значениями переменных!\n` +
+                `${negativeVars
+                  .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
+                  .join("\n")}\n` +
+                `Задача в канонической форме требует x_i >= 0. Проверьте правильность ввода ограничений.`,
+            });
+            this.hasSolution = true;
+          } else {
+            this.steps.push({
+              stepNumber: this.steps.length,
+              basis: [...currentState.basis],
+              table: currentState.table.map((row: Fraction[]) => [...row]),
+              possiblePivots: [],
+              isComplete: true,
+              value: f,
+              message: `Оптимальное решение найдено!\nЗначение: ${f.toFraction()}\nТочка: (${xs.join(
+                ", "
+              )})`,
+            });
+            this.hasSolution = false;
+          }
+          break
+        } else if (branch === "No limit") {
+
+          this.steps.push({
+            stepNumber: this.steps.length,
+            basis: [...currentState.basis],
+            table: currentState.table.map((row: Fraction[]) => [...row]),
+            possiblePivots: [],
+            isComplete: true,
+            message:
+              "Целевая функция не ограничена снизу: задача не имеет оптимального решения",
+          });
+          this.hasSolution = false;
+          break;
+        } else {
+          const pivot = phase2Solver.findBestPivot();
+          if (!pivot) {
+            this.steps.push({
+              stepNumber: this.steps.length,
+              basis: [...currentState.basis],
+              table: currentState.table.map((row: Fraction[]) => [...row]),
+              possiblePivots: [],
+              isComplete: true,
+              message: "Ошибка: не найден опорный элемент",
+            });
+            this.hasSolution = false;
+            break;
+          }
+
+          phase2Solver.calculateStep();
+
+          const newState = phase2Solver.getCurrentState();
+          this.steps.push({
+            stepNumber: this.steps.length,
+            basis: [...newState.basis],
+            table: newState.table.map((row: Fraction[]) => [...row]),
+            possiblePivots: [pivot],
+            selectedPivot: { row: pivot.row, col: pivot.col },
+            isComplete: false,
+            message: `Шаг ${this.steps.length}: опорный элемент в строке ${pivot.row + 1
+              }, столбце x${pivot.col + 1}`,
+          });
+
+          this.hasSolution = true;
+        }
+      }
+
       this.solution = this.extractSolution(phase2Solver, totalOriginalVars);
 
       // console.log("Фаза II: Оптимальное решение найдено");
-      console.log(`Optimal: ${optimalValue.toString()}`);
+      // console.log(`Optimal: ${optimalValue.toString()}`);
 
       return {
         solution: this.solution,
-        value: optimalValue,
-        hasSolution: true,
+        value: phase2Solver.getSuccessValue(),
+        hasSolution: this.hasSolution,
       };
     } catch (error: any) {
       console.log("Ошибка при решении оригинальной задачи (фаза II):", error);
