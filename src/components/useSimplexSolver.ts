@@ -55,31 +55,31 @@ export function useSimplexSolver() {
 
           solver.getSteps().map((step) => allSteps.push(step));
 
-          if (result.hasSolution) {
-            allSteps.push({
-              stepNumber: allSteps.length,
-              basis: [],
-              table: [],
-              possiblePivots: [],
-              isComplete: true,
-              value: result.value,
-              message: `Решение найдено методом искусственного базиса\n${result.solution
-                .map((v, i) => `x${i + 1} = ${v.toFraction()}`)
-                .join(
-                  ", "
-                )}\nЗначение целевой функции: ${result.value.toFraction()}`,
-            });
-          } else {
-            allSteps.push({
-              stepNumber: allSteps.length,
-              basis: [],
-              table: [],
-              possiblePivots: [],
-              isComplete: true,
-              message:
-                "Задача не имеет решения: система ограничений несовместна или искусственные переменные не удалось исключить",
-            });
-          }
+          // if (result.hasSolution) {
+          //   allSteps.push({
+          //     stepNumber: allSteps.length,
+          //     basis: [],
+          //     table: [],
+          //     possiblePivots: [],
+          //     isComplete: true,
+          //     value: result.value,
+          //     message: `Решение найдено методом искусственного базиса\n${result.solution
+          //       .map((v, i) => `x${i + 1} = ${v.toFraction()}`)
+          //       .join(
+          //         ", "
+          //       )}\nЗначение целевой функции: ${result.value.toFraction()}`,
+          //   });
+          // } else {
+          //   allSteps.push({
+          //     stepNumber: allSteps.length,
+          //     basis: [],
+          //     table: [],
+          //     possiblePivots: [],
+          //     isComplete: true,
+          //     message:
+          //       "Задача не имеет решения: система ограничений несовместна или искусственные переменные не удалось исключить",
+          //   });
+          // }
         } catch (e: any) {
           allSteps.push({
             stepNumber: allSteps.length,

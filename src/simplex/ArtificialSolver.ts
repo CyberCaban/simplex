@@ -49,6 +49,8 @@ export class ArtificialBasisSolver {
     for (let i = 0; i < numArtificialVars; i++) {
       artificialFn.push(new Fraction(1));
     }
+
+    // const func = originalTask.isMaximization ? artificialFn.map((it) => it.neg()) : artificialFn;
     return {
       constraints: newConstraints,
       basis: artificialBasis,
