@@ -42,10 +42,16 @@ export class SimplexSolver {
     return [this.table.length, this.table[0].length];
   }
   get fn(): Fraction[] {
-    return this.table[this.size[0] - 1];
+    return [...this.table[this.size[0] - 1]];
   }
   get constraints(): Fraction[][] {
-    return this.table.slice(0, this.table.length);
+    return this.table.slice(0, this.table.length - 1);
+  }
+  getBasis(): number[] {
+    return this.basis;
+  }
+  getLPTask(): LPTask {
+    return { constraints: this.constraints, basis: this.getBasis(), isMaximization: false, fn: this.fn }
   }
   getCurrentPoint() {
     const [rows, cols] = this.size;

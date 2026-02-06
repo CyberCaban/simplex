@@ -19,6 +19,8 @@ function App() {
   const [constraintsData, setConstraintsData] = useState<string[][]>([]);
   const [basisSelection, setBasisSelection] = useState<boolean[]>([]);
 
+  const [currentTask, setCurrentTask] = useState<LPTask | undefined>(undefined);
+
   const [isLoadingFromFile, setisLoadingFromFile] = useState(false);
 
   const [filename, setFilename] = useState("simplex-task");
@@ -131,12 +133,19 @@ function App() {
   };
 
   const buildFromPivot = (row: number, col: number, basis: number[]): LPTask => {
+    if (currentTask !== undefined) {
+      currentTask.basis = basis.slice()
+      currentTask.basis[row] = col;
+
+      return currentTask;
+    }
     const fn = fnCoeffs.map((c) => new Fraction(c));
     const constraints = constraintsData.map((row) =>
       row.map((c) => new Fraction(c))
     );
 
     let newBasis = basis.slice();
+    // if (!useArtificialBasis)
     newBasis[row] = col
 
     return { fn, constraints, basis: newBasis, isMaximization };
@@ -152,7 +161,10 @@ function App() {
     if (isAutoMode) {
       solveAuto(task, useArtificialBasis);
     } else {
-      startStepMode(task, useArtificialBasis);
+      let result = startStepMode(task, useArtificialBasis);
+      if (result !== false) {
+        setCurrentTask(result)
+      }
     }
   };
 

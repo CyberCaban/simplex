@@ -15,6 +15,10 @@ export class ArtificialBasisSolver {
     this.artificialTask = this.createArtificialTask(lpTask);
   }
 
+  getArtificialTask(): LPTask {
+    return this.artificialTask;
+  }
+
   getSteps(): StepData[] {
     return this.steps;
   }
@@ -96,7 +100,7 @@ export class ArtificialBasisSolver {
                 `${negativeVars
                   .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
                   .join("\n")}\n` +
-                `Задача в канонической форме требует x_i >= 0. Проверьте правильность ввода ограничений.`,
+                `Задача в канонической форме требует x_i >= 0. Проверьте правильность ввода ограничений и/или базиса.`,
             });
           } else {
             this.steps.push({
@@ -255,7 +259,7 @@ export class ArtificialBasisSolver {
                 `${negativeVars
                   .map((v) => `x${v.index + 1} = ${v.value.toFraction()} < 0`)
                   .join("\n")}\n` +
-                `Задача в канонической форме требует x_i >= 0. Проверьте правильность ввода ограничений.`,
+                `Задача в канонической форме требует x_i >= 0. Проверьте правильность ввода ограничений и/или базиса.`,
             });
             this.hasSolution = true;
           } else {
